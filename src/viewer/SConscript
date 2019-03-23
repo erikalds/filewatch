@@ -1,9 +1,10 @@
 import os
 
-Import('env')
+Import('env rpclib')
 
 env = env.Clone()
 
+env.Append(LIBS=[rpclib])
 cppfiles = env.Glob("*.cpp") + env.Glob(os.path.join("unittest", "*.cpp"))
 viewer = env.Program("filewatcher", source=cppfiles)
 

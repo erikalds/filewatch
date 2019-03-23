@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package filewatch;
+
+service Directory {
+  rpc ListFiles(Directoryname) returns (FileList) {}
+  rpc ListDirectories(Directoryname) returns (DirList) {}
+  rpc ListenForEvents(Directoryname) returns (stream DirectoryEvent) {}
+}
+
+service File {
+  rpc GetContents(Filename) returns (FileContent) {}
+  rpc ListenForEvents(Filename) returns (stream FileEvent) {}
+}
+
+// A timestamp.
+message Timestamp {
+  uint64 epoch = 1;  // milliseconds since epoch
+}
+
+// Name of a directory with modification timestamp
+message Directoryname {
+  string name = 1;  // Path of the directory
+  Timestamp modification_time = 2;  // Modification timestamp of directory
+}
+
+// Name of a file with modification timestamp
+message Filename {
+  Directoryname dirname = 1;  // Path of containing directory
+  string name = 2;  // Name of file
+  Timestamp modification_time = 3;  // Modification timestamp of file
+}
+
+// A list of files.
+message FileList {
+  Directoryname name = 1;  // Path of containing directory
+  repeated Filename filenames = 2;  // Names of files in directory name
+}
+
+// A list of directories.
+message DirList {
+  Directoryname name = 1;  // Path of containing directory
+  repeated Directoryname dirnames = 2;  // Names of directories in directory name
+}
+
+// Content of file with name filename contained in directory dirname.
+message FileContent {
+  Directoryname dirname = 1;  // Path of directory containing this file
+  Filename filename = 2;  // Name of this file
+  repeated string lines = 3; // The content of this file
+}
+
+message DirectoryEvent {
+  enum Event {
+    FILE_ADDED = 0;
+    FILE_REMOVED = 1;
+    DIRECTORY_ADDED = 2;
+    DIRECTORY_REMOVED = 3;
+  }
+  Event event = 1;  // What happened
+  string name = 2;  // Name of directory containing filename or dirname
+  Filename filename = 3;  // Only used in FILE_ADDED / FILE_REMOVED
+  Directoryname dirname = 4;  // Only used in DIRECTORY_ADDED / DIRECTORY_REMOVED
+  Timestamp modification_time = 5;  // Timestamp of modification
+}
+
+// In case of:
+//  - LINES_INSERTED: linenum is the line number the insertion happened on.
+//    lines contains the inserted text lines.  n_lines is the number of lines in
+//    lines.  Subsequent lines of text in the file has their line numbers
+//    increased by the number of text lines in lines.
+//  - LINES_REMOVED: linenum is the line number of the first line that was
+//    removed.  n_lines is the number of lines that was removed.  lines is
+//    empty.  Subsequent lines of text in the file has their line numbers
+//    decreased by n_lines.
+//  - LINES_MODIDIED: linenum is the line number of the first line that was
+//    modified.  n_lines is the number of lines that was modified.  lines
+//    contains the new content of the lines of text that was modified.
+//  - TRUNCATED: The file was emptied. linenum, n_lines is 0, lines is empty.
+message FileEvent {
+  enum Event {
+    LINES_INSERTED = 0;
+    LINES_REMOVED = 1;
+    LINES_MODIFIED = 2;
+    TRUNCATED = 3;
+  }
+  Event event = 1;  // What happened
+  string filename = 2;  // Name of file the event happened in
+  int32 linenum = 3;  // see message doc
+  int32 n_lines = 4;  // see message doc
+  repeated string lines = 5;  // see message doc
+  Timestamp modification_time = 6; // Time stamp of the event
+}

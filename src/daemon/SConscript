@@ -1,12 +1,13 @@
 import os
 
-Import('env')
+Import('env rpclib')
 
 env = env.Clone()
 
 cppfiles = env.Glob("*.cpp") +\
            env.Glob(os.path.join("unittest", "*.cpp"))
 
+env.Append(LIBS=[rpclib])
 daemon = env.Program("fwdaemon", source=cppfiles)
 
 testresult = env.Command("testreport.txt", daemon,
