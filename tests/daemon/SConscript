@@ -1,0 +1,44 @@
+import os
+
+Import("env daemon")
+
+tests = env.Glob("test_*.py")
+
+protoc = "python3 -m grpc_tools.protoc -I%s --python_out=%s --grpc_python_out=%s %s >> $TARGET 2>&1"
+
+testresult = env.Command("daemon_report.txt", [daemon] + tests,
+                         [
+                             Delete("$TARGET"),
+                             protoc % (env.Dir(os.path.join("#", "src", "rpc_defs")).path,
+                                       env.Dir(".").path, env.Dir(".").path,
+                                       env.File(os.path.join("#", "src", "rpc_defs", "filewatch.proto")).path),
+                             "python3 %s $SOURCES >> $TARGET 2>&1" % env.File("run_tests.py").path
+                         ])
+
+env.Depends(testresult, "run_tests.py")
+
+
+def print_file(env, target, source):
+    with open(target[0].path, 'r') as fd:
+        print("%s:\n%s" % (source[0].path, fd.read()))
+
+
+env.AddPostAction(testresult, print_file)
+
+
+def print_testresults():
+    from SCons.Script import GetBuildFailures
+    for bf in GetBuildFailures():
+        if bf.node == testresult[0]:
+            print("%s failed: %s" % (bf.node, bf.errstr))
+            # testresult[0] exists is supposed to exist even if testprog fails.
+            if not os.path.exists(bf.node.path):
+                print("%s does not exist" % bf.node)
+            else:
+                print_file(env, testresult, daemon)
+
+
+import atexit
+atexit.register(print_testresults)
+
+Return("testresult")

@@ -12,3 +12,7 @@ daemon = env.SConscript(os.path.join("src", "daemon", "SConscript"),
                         exports=['env', 'rpclib'])
 viewer = env.SConscript(os.path.join("src", "viewer", "SConscript"),
                         exports=['env', 'rpclib'])
+
+daemon_test_report = env.SConscript(os.path.join("tests", "daemon",
+                                                 "SConscript"),
+                                    exports=['env', 'daemon'])

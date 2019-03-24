@@ -2,6 +2,11 @@ syntax = "proto3";
 
 package filewatch;
 
+service FileWatch {
+  rpc GetStatus(Void) returns (FileWatchStatus) {}
+  rpc GetVersion(Void) returns (Version) {}
+}
+
 service Directory {
   rpc ListFiles(Directoryname) returns (FileList) {}
   rpc ListDirectories(Directoryname) returns (DirList) {}
@@ -11,6 +16,25 @@ service Directory {
 service File {
   rpc GetContents(Filename) returns (FileContent) {}
   rpc ListenForEvents(Filename) returns (stream FileEvent) {}
+}
+
+// An empty message
+message Void {
+}
+
+message FileWatchStatus {
+  enum Status {
+    OK = 0;
+    ERROR = 1;
+  }
+  Status status = 1;
+  string msg = 2;
+}
+
+message Version {
+  uint32 Major = 1;
+  uint32 Minor = 2;
+  uint32 Revision = 3;
 }
 
 // A timestamp.

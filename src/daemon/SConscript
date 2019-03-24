@@ -29,7 +29,7 @@ def print_testresults():
             if not os.path.exists(bf.node.path):
                 print("%s does not exist" % bf.node)
             else:
-                print_file(env, testresult, pacman)
+                print_file(env, testresult, daemon)
 
 atexit.register(print_testresults)
 
