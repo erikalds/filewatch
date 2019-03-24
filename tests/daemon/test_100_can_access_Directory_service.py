@@ -2,8 +2,8 @@
 
 # Source file created: 2019-03-24
 #
-# poglw - Pure OpenGL Widgets
-# Copyright (C) 2017 Erik Åldstedt Sund
+# filewatch - File watcher utility
+# Copyright (C) 2019 Erik Åldstedt Sund
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
