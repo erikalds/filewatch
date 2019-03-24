@@ -34,4 +34,3 @@ def run_test():
     channel = grpc.insecure_channel('localhost:45678')
     stub = filewatch_pb2_grpc.FileWatchStub(channel)
     status = stub.GetStatus(filewatch_pb2.Void())
-    version = stub.GetVersion(filewatch_pb2.Void())

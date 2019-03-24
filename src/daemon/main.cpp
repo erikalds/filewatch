@@ -1,3 +1,5 @@
+#include "server.h"
+
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 
@@ -30,5 +32,6 @@ int main(int argc, const char* argv[])
     return session.run();
   }
 
-  return 0;
+  fw::dm::Server server;
+  return server.run();
 }

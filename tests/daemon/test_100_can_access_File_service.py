@@ -27,8 +27,13 @@
 
 import grpc
 
+import filewatch_pb2
 import filewatch_pb2_grpc
 
 def run_test():
     channel = grpc.insecure_channel('localhost:45678')
     stub = filewatch_pb2_grpc.FileStub(channel)
+    fname = filewatch_pb2.Filename()
+    fname.dirname.name = "."
+    fname.name = "test.txt"
+    filecontent = stub.GetContents(fname)

@@ -27,8 +27,12 @@
 
 import grpc
 
+import filewatch_pb2
 import filewatch_pb2_grpc
 
 def run_test():
     channel = grpc.insecure_channel('localhost:45678')
     stub = filewatch_pb2_grpc.DirectoryStub(channel)
+    dirname = filewatch_pb2.Directoryname()
+    dirname.name = "."
+    filelist = stub.ListFiles(dirname)
