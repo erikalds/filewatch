@@ -32,9 +32,9 @@ message FileWatchStatus {
 }
 
 message Version {
-  uint32 Major = 1;
-  uint32 Minor = 2;
-  uint32 Revision = 3;
+  uint32 major = 1;
+  uint32 minor = 2;
+  uint32 revision = 3;
 }
 
 // A timestamp.
