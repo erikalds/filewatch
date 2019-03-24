@@ -76,20 +76,20 @@ class RunningProcess:
 
         print("Terminating %s" % procname)
         self.proc.terminate()
-        optional_exit_code = self.proc.wait(3)
-        if optional_exit_code is None:
+        try:
+            exit_code = self.proc.wait(3)
+        except subprocess.TimeoutExpired:
             print("%s did not die in 3 seconds, killing..." % procname)
             self.proc.kill()
-            optional_exit_code = self.proc.wait(5)
+            try:
+                exit_code = self.proc.wait(5)
+            except subprocess.TimeoutExpired:
+                errtext = "WARNING: %s did not die in 5 seconds.\n" % procname
+                errtext += "You should clean up manually."
+                raise Exception(errtext)
 
-        if optional_exit_code is None:
-            errtext = "WARNING: %s did not die in 5 seconds.\n" % procname
-            errtext += "You should clean up manually."
-            raise Exception(errtext)
-
-        if optional_exit_code != 0:
-            raise Exception("%s returned exit code: %d" % (procname,
-                                                           optional_exit_code))
+        if exit_code != 0:
+            raise Exception("%s returned exit code: %d" % (procname, exit_code))
 
 
 def run_process(cmd):
