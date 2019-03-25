@@ -9,7 +9,7 @@ cppfiles = env.Glob("*.cpp") +\
            env.Glob(os.path.join("unittest", "*.cpp"))
 
 env.AppendUnique(LINKFLAGS=['-pthread'])
-env.AppendUnique(LIBS=[rpclib, "grpc++", "protobuf", "pthread"])
+env.AppendUnique(LIBS=[rpclib, "grpc++", "protobuf", "pthread", "stdc++fs"])
 daemon = env.Program("fwdaemon", source=cppfiles)
 
 testresult = env.Command("testreport.txt", daemon,

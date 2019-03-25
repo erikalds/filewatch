@@ -32,6 +32,7 @@
 #include <grpc++/server_builder.h>
 #include <grpc++/security/server_credentials.h>
 #include <csignal>
+#include <filesystem>
 #include <iostream>
 
 namespace fw
@@ -66,15 +67,44 @@ namespace fw
 
       };
 
+      int64_t mtime(const std::filesystem::path& p)
+      {
+        auto t = std::filesystem::last_write_time(p).time_since_epoch();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+      }
+
+      template<typename T>
+      void set_mtime_of(T& var, const std::filesystem::path& p)
+      {
+        var.mutable_modification_time()->set_epoch(mtime(p));
+      }
+
       class DirService : public filewatch::Directory::Service
       {
       public:
+        explicit DirService(const std::string& rootdir) : rootdir(rootdir) {}
         ::grpc::Status ListFiles(::grpc::ServerContext* context,
                                  const ::filewatch::Directoryname* request,
                                  ::filewatch::FileList* response) override
         {
+          response->mutable_name()->set_name(request->name());
+          auto dir = rootdir / std::filesystem::path(request->name());
+          set_mtime_of(*response->mutable_name(), dir);
+          for (auto& p : std::filesystem::directory_iterator(dir))
+          {
+            if (p.is_directory())
+              continue;
+
+            filewatch::Filename* fn = response->add_filenames();
+            fn->mutable_dirname()->set_name(request->name());
+            fn->set_name(p.path().filename().string());
+            set_mtime_of(*fn, p.path());
+          }
           return grpc::Status::OK;
         }
+
+      private:
+        std::filesystem::path rootdir;
       };
 
       class FileService : public filewatch::File::Service
@@ -94,7 +124,9 @@ namespace fw
     class Services
     {
     public:
-      explicit Services(const std::string& rootdir) {}
+      explicit Services(const std::string& rootdir) :
+        Directory(rootdir)
+      {}
 
       void register_services(grpc::ServerBuilder& builder)
       {
