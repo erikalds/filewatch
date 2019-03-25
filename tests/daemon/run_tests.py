@@ -29,6 +29,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 
 def is_sorted(list_):
@@ -36,7 +37,7 @@ def is_sorted(list_):
         return True
 
     for i in range(1, len(list_)):
-        if list_[i - 1] > list[i]:
+        if list_[i - 1] > list_[i]:
             return False
 
     return True
@@ -59,6 +60,25 @@ def group_tests(testlist):
     return groups
 
 
+class TemporaryDir:
+    def __init__(self, containing_dir):
+        self.containing_dir = containing_dir
+        self.path = None
+
+    def __enter__(self):
+        self.path = tempfile.mkdtemp(dir=self.containing_dir)
+        print("Created tempdir: %s" % self.path)
+        return self
+
+    def __exit__(self, type_, value, traceback):
+        os.rmdir(self.path)
+        print("Deleted tempdir: %s" % self.path)
+
+
+def create_tempdir(containing_dir):
+    return TemporaryDir(containing_dir)
+
+
 class RunningProcess:
     def __init__(self, cmd):
         self.cmd = cmd
@@ -69,7 +89,7 @@ class RunningProcess:
 
     def __exit__(self, type_, value, traceback):
         optional_exit_code = self.proc.poll()
-        procname = self.cmd.split()[0]
+        procname = self.cmd[0].split()[0]
         if optional_exit_code is not None:
             errtext = "%s exited prematurely with exit code: %d"
             raise Exception(errtext % (procname, optional_exit_code))
@@ -97,29 +117,35 @@ def run_process(cmd):
 
 
 def main(argv):
-    with run_process(argv[1]) as p:
-        all_tests = group_tests(argv[2:])
-        keys = all_tests.keys()
-        assert(is_sorted(keys))
-        for group in keys:
-            failures = 0
-            for test in all_tests[group]:
-                print("Running test %s..." % test)
-                testmod = os.path.splitext(test)[0]
-                try:
-                    exec("import %s" % testmod)
-                    eval("%s.run_test()" % testmod)
-                    print("test %s succeeded" % test)
-                except Exception as e:
-                    import traceback
-                    traceback.print_exc()
-                    failures += 1
-                    print("test %s failed" % test)
+    with create_tempdir(".") as tempdir:
+        with run_process([argv[1], tempdir.path]) as p:
+            all_tests = group_tests(argv[2:])
+            keys = list(all_tests.keys())
+            keys.sort()
+            assert(is_sorted(keys))
+            for group in keys:
+                failures = 0
+                for test in all_tests[group]:
+                    print("Running test %s..." % test)
+                    testmod = os.path.splitext(test)[0]
+                    try:
+                        exec("import %s" % testmod)
+                        retval = eval("%s.run_test(tempdir.path)" % testmod)
+                        if retval is not None and retval is False:
+                            print("test %s failed" % test)
+                            failures += 1
+                        else:
+                            print("test %s succeeded" % test)
+                    except:
+                        import traceback
+                        traceback.print_exc()
+                        failures += 1
+                        print("test %s failed" % test)
 
-            if failures > 0:
-                print("%d tests failed in group %d. Bailing out." % (failures,
-                                                                     group))
-                return failures
+                if failures > 0:
+                    print("%d tests failed in group %d. Bailing out." % (failures,
+                                                                         group))
+                    return failures
 
     return 0
 

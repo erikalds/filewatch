@@ -94,7 +94,7 @@ namespace fw
     class Services
     {
     public:
-      Services() {}
+      explicit Services(const std::string& rootdir) {}
 
       void register_services(grpc::ServerBuilder& builder)
       {
@@ -122,8 +122,8 @@ namespace fw
     }
 
 
-    Server::Server() :
-      services(std::make_unique<Services>())
+    Server::Server(const std::string& rootdir) :
+      services(std::make_unique<Services>(rootdir))
     {
       g_server = this;
       std::signal(SIGTERM, signal_handler);

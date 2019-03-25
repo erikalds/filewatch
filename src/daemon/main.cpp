@@ -58,6 +58,12 @@ int main(int argc, const char* argv[])
     return session.run();
   }
 
-  fw::dm::Server server;
+  if (args.size() < 2)
+  {
+    std::cerr << "usage: " << args[0] << " <root-dir-to-watch>\n";
+    return -1;
+  }
+
+  fw::dm::Server server(args[1]);
   return server.run();
 }

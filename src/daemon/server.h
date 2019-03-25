@@ -41,7 +41,7 @@ namespace fw
     class Server
     {
     public:
-      Server();
+      explicit Server(const std::string& rootdir);
       ~Server();
 
       int run();
