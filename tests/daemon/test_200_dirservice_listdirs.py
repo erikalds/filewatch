@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Source file created: 2019-03-24
+# Source file created: 2019-03-25
 #
 # filewatch - File watcher utility
 # Copyright (C) 2019 Erik Åldstedt Sund
@@ -26,14 +26,13 @@
 #   NORWAY
 
 import grpc
-import math
 import os
 import unittest
 
-from filesys import FilesystemCleanup
-
 import filewatch_pb2
 import filewatch_pb2_grpc
+
+from filesys import FilesystemCleanup
 
 
 fs = None
@@ -44,51 +43,46 @@ class TestCase(unittest.TestCase):
         self.channel = grpc.insecure_channel('localhost:45678')
         self.stub = filewatch_pb2_grpc.DirectoryStub(self.channel)
 
-    def test_lists_files_in_root_dir(self):
+    def test_dirs_in_root_dir(self):
         dirname = filewatch_pb2.Directoryname()
         dirname.name = "."
-        filelist = self.stub.ListFiles(dirname)
-        self.assertEquals(".", filelist.name.name)
-        self.assertEquals(2, len(filelist.filenames))
-        for fname in filelist.filenames:
-            self.assertEquals(".", fname.dirname.name)
-        self.assertEquals(set(["file1.txt", "file2.txt"]),
-                          set([fname.name for fname in filelist.filenames]))
+        dirlist = self.stub.ListDirectories(dirname)
+        self.assertEquals(".", dirlist.name.name)
+        self.assertEquals(2, len(dirlist.dirnames))
+        self.assertEquals(set(["dir1", "dir2"]),
+                          set([dname.name for dname in dirlist.dirnames]))
 
-    def test_lists_files_in_sub_dir(self):
+    def test_dirs_in_sub_dir(self):
         dirname = filewatch_pb2.Directoryname()
         dirname.name = "dir1"
-        filelist = self.stub.ListFiles(dirname)
-        self.assertEquals("dir1", filelist.name.name)
-        self.assertEquals(3, len(filelist.filenames))
-        for fname in filelist.filenames:
-            self.assertEquals("dir1", fname.dirname.name)
+        dirlist = self.stub.ListDirectories(dirname)
+        self.assertEquals("dir1", dirlist.name.name)
+        self.assertEquals(3, len(dirlist.dirnames))
+        self.assertEquals(set(["dir3", "dir4", "dir5"]),
+                          set([dname.name for dname in dirlist.dirnames]))
 
-        self.assertEquals(set(["file3.txt", "file4.txt", "file5.txt"]),
-                          set([fname.name for fname in filelist.filenames]))
-
-    def test_lists_files_modification_time(self):
+    def test_modification_times(self):
         global fs
-        files = ["file1.txt", "file2.txt", os.path.join("dir1", "file3.txt"),
-                 os.path.join("dir1", "file4.txt"),
-                 os.path.join("dir1", "file5.txt")]
-        expected = { name : fs.mtime(name) for name in files }
+        dirs = ["dir1", "dir2", os.path.join("dir1", "dir3"),
+                 os.path.join("dir1", "dir4"),
+                 os.path.join("dir1", "dir5")]
+        expected = { name : fs.mtime(name) for name in dirs }
         dirname = filewatch_pb2.Directoryname()
         dirname.name = "."
-        filelist = self.stub.ListFiles(dirname)
-        self.assertEquals(filelist.name.modification_time.epoch,
+        dirlist = self.stub.ListDirectories(dirname)
+        self.assertEquals(dirlist.name.modification_time.epoch,
                           fs.mtime("."))
-        for fname in filelist.filenames:
-            self.assertEquals(expected[fname.name],
-                              fname.modification_time.epoch)
+        for dname in dirlist.dirnames:
+            self.assertEquals(expected[dname.name],
+                              dname.modification_time.epoch)
 
         dirname.name = "dir1"
-        filelist = self.stub.ListFiles(dirname)
-        self.assertEquals(filelist.name.modification_time.epoch,
+        dirlist = self.stub.ListDirectories(dirname)
+        self.assertEquals(dirlist.name.modification_time.epoch,
                           fs.mtime("dir1"))
-        for fname in filelist.filenames:
-            self.assertEquals(expected[os.path.join("dir1", fname.name)],
-                              fname.modification_time.epoch)
+        for dname in dirlist.dirnames:
+            self.assertEquals(expected[os.path.join("dir1", dname.name)],
+                              dname.modification_time.epoch)
 
 
 def run_test(tempdir):
@@ -98,9 +92,13 @@ def run_test(tempdir):
         fs.create_file("file1.txt", "file1")
         fs.create_file("file2.txt", "file2")
         fs.create_dir("dir1")
+        fs.create_dir("dir2")
         fs.create_file(os.path.join("dir1", "file3.txt"), "file3")
         fs.create_file(os.path.join("dir1", "file4.txt"), "file4")
         fs.create_file(os.path.join("dir1", "file5.txt"), "file5")
+        fs.create_dir(os.path.join("dir1", "dir3"))
+        fs.create_dir(os.path.join("dir1", "dir4"))
+        fs.create_dir(os.path.join("dir1", "dir5"))
 
         runner = unittest.TextTestRunner()
         result = runner.run(unittest.makeSuite(TestCase))

@@ -103,6 +103,26 @@ namespace fw
           return grpc::Status::OK;
         }
 
+        ::grpc::Status
+        ListDirectories(::grpc::ServerContext* context,
+                        const ::filewatch::Directoryname* request,
+                        ::filewatch::DirList* response) override
+        {
+          response->mutable_name()->set_name(request->name());
+          auto dir = rootdir / std::filesystem::path(request->name());
+          set_mtime_of(*response->mutable_name(), dir);
+          for (auto& p : std::filesystem::directory_iterator(dir))
+          {
+            if (!p.is_directory())
+              continue;
+
+            filewatch::Directoryname* dn = response->add_dirnames();
+            dn->set_name(p.path().filename().string());
+            set_mtime_of(*dn, p.path());
+          }
+          return grpc::Status::OK;
+        }
+
       private:
         std::filesystem::path rootdir;
       };
