@@ -10,12 +10,10 @@ env.Command([env.File(os.path.join("generated", "filewatch.grpc.pb.cc")),
              env.File(os.path.join("generated", "filewatch.pb.h"))],
             env.File("filewatch.proto"),
             [
-                Mkdir("generated"),
+                Mkdir(env.Dir("generated")),
                 grpc_protoc_cmd % (env.Dir(".").path, env.Dir("generated").path),
                 protoc_cmd % (env.Dir(".").path, env.Dir("generated").path)
             ])
-#env.Command([],
-#            env.File("filewatch.proto"),
 
 rpclib = env.StaticLibrary("filewatch_rpc", env.Glob(os.path.join("generated", "*.cc")))
 
