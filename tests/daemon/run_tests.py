@@ -30,6 +30,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 
 
 def is_sorted(list_):
@@ -117,6 +118,7 @@ def run_process(cmd):
 
 
 def main(argv):
+    starttime = time.time()
     with create_tempdir(".") as tempdir:
         with run_process([argv[1], tempdir.path]) as p:
             all_tests = group_tests(argv[2:])
@@ -146,6 +148,8 @@ def main(argv):
                     print("%d tests failed in group %d. Bailing out." % (failures,
                                                                          group))
                     return failures
+
+    print("Tests ran for %f s" % (time.time() - starttime))
 
     return 0
 

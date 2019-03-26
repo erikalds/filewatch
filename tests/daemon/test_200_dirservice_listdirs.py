@@ -84,6 +84,24 @@ class TestCase(unittest.TestCase):
             self.assertEquals(expected[os.path.join("dir1", dname.name)],
                               dname.modification_time.epoch)
 
+    def test_non_existing_directory(self):
+        dirname = filewatch_pb2.Directoryname()
+        dirname.name = "not_existing_dir"
+        with self.assertRaisesRegex(Exception,
+                                    "'not_existing_dir' does not exist") as cm:
+            dirlist = self.stub.ListDirectories(dirname)
+
+        self.assertEquals(grpc.StatusCode.NOT_FOUND, cm.exception.code())
+
+    def test_error_on_existing_file(self):
+        dirname = filewatch_pb2.Directoryname()
+        dirname.name = "file1.txt"
+        with self.assertRaisesRegex(Exception,
+                                    "'file1.txt' is not a directory") as cm:
+            dirlist = self.stub.ListDirectories(dirname)
+
+        self.assertEquals(grpc.StatusCode.NOT_FOUND, cm.exception.code())
+
 
 def run_test(tempdir):
     global fs

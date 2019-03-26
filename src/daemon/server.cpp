@@ -83,12 +83,21 @@ namespace fw
       {
       public:
         explicit DirService(const std::string& rootdir) : rootdir(rootdir) {}
+
         ::grpc::Status ListFiles(::grpc::ServerContext* context,
                                  const ::filewatch::Directoryname* request,
                                  ::filewatch::FileList* response) override
         {
-          response->mutable_name()->set_name(request->name());
           auto dir = rootdir / std::filesystem::path(request->name());
+          if (!std::filesystem::exists(dir))
+            return grpc::Status(grpc::NOT_FOUND,
+                                "'" + request->name() + "' does not exist");
+
+          if (!std::filesystem::is_directory(dir))
+            return grpc::Status(grpc::NOT_FOUND,
+                                "'" + request->name() + "' is not a directory");
+
+          response->mutable_name()->set_name(request->name());
           set_mtime_of(*response->mutable_name(), dir);
           for (auto& p : std::filesystem::directory_iterator(dir))
           {
@@ -108,8 +117,16 @@ namespace fw
                         const ::filewatch::Directoryname* request,
                         ::filewatch::DirList* response) override
         {
-          response->mutable_name()->set_name(request->name());
           auto dir = rootdir / std::filesystem::path(request->name());
+          if (!std::filesystem::exists(dir))
+            return grpc::Status(grpc::NOT_FOUND,
+                                "'" + request->name() + "' does not exist");
+
+          if (!std::filesystem::is_directory(dir))
+            return grpc::Status(grpc::NOT_FOUND,
+                                "'" + request->name() + "' is not a directory");
+
+          response->mutable_name()->set_name(request->name());
           set_mtime_of(*response->mutable_name(), dir);
           for (auto& p : std::filesystem::directory_iterator(dir))
           {
