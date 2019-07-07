@@ -2,6 +2,10 @@ import os
 
 Import('env')
 
+env = env.Clone()
+
+env.Tool('grpc')
+
 grpc_protoc_cmd = "protoc -I %s --grpc_out=%s --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` $SOURCE"
 protoc_cmd = "protoc -I %s --cpp_out=%s $SOURCE"
 env.Command([env.File(os.path.join("generated", "filewatch.grpc.pb.cc")),

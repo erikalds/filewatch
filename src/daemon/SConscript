@@ -4,6 +4,8 @@ Import('env rpclib')
 
 env = env.Clone()
 
+env.Tool("catch_test")
+
 env.AppendUnique(CXXFLAGS=['-pthread'])
 cppfiles = env.Glob("*.cpp") +\
            env.Glob(os.path.join("unittest", "*.cpp"))
@@ -12,27 +14,6 @@ env.AppendUnique(LINKFLAGS=['-pthread'])
 env.AppendUnique(LIBS=[rpclib, "grpc++", "protobuf", "pthread", "stdc++fs"])
 daemon = env.Program("fwdaemon", source=cppfiles)
 
-testresult = env.Command("testreport.txt", daemon,
-                         "./$SOURCE --run-unit-tests --use-colour no -o $TARGET")
-
-def print_file(env, target, source):
-    with open(target[0].path, 'r') as fd:
-        print("%s:\n%s" % (source[0].path, fd.read()))
-
-env.AddPostAction(testresult, print_file)
-
-import atexit
-def print_testresults():
-    from SCons.Script import GetBuildFailures
-    for bf in GetBuildFailures():
-        if bf.node == testresult[0]:
-            print("%s failed: %s" % (bf.node, bf.errstr))
-            # testresult[0] exists is supposed to exist even if testprog fails.
-            if not os.path.exists(bf.node.path):
-                print("%s does not exist" % bf.node)
-            else:
-                print_file(env, testresult, daemon)
-
-atexit.register(print_testresults)
+testresult = env.CatchTest("testreport.txt", daemon)
 
 Return('daemon')
