@@ -1,7 +1,13 @@
 *.o
 *~
 *.swp
+*.pyc
 __pycache__
+.dir-locals.el
 /.sconsign.dblite
 /.sconf_temp
 /config.log
+/GPATH
+/GRTAGS
+/GTAGS
+
