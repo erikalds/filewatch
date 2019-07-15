@@ -12,8 +12,8 @@ env['TESTRUNNER'] = env.File('run_tests.py')
 
 testresult = env.Command("daemon_report.txt", [daemon] + tests,
                          [
-                             "{ python3 -m grpc_tools.protoc -I$GRPCDEFSDIR --python_out=$GRPCOUTDIR --grpc_python_out=$GRPCPYTHONOUTDIR $GRPCDEFSDIR/$GRPCSOURCE 2>&1 ; echo $$? > /tmp/grpc_tools.protoc.status ; } | tee $TARGET && exit $$(cat /tmp/grpc_tools.protoc.status)",
-                             "{ python3 $TESTRUNNER $SOURCES 2>&1 ; echo $$? > /tmp/${TESTRUNNER.name}.status ; } | tee --append $TARGET && exit $$(cat /tmp/${TESTRUNNER.name}.status)"
+                             "python3 -m grpc_tools.protoc -I$GRPCDEFSDIR --python_out=$GRPCOUTDIR --grpc_python_out=$GRPCPYTHONOUTDIR $GRPCDEFSDIR/$GRPCSOURCE",
+                             "python3 $TESTRUNNER $SOURCES --tee-output $TARGET"
                          ])
 
 env.Depends(testresult, "run_tests.py")

@@ -1,6 +1,6 @@
 import os
 
-Import('env rpclib')
+Import('env rpclib common')
 
 env = env.Clone()
 
@@ -10,8 +10,9 @@ env.AppendUnique(CXXFLAGS=['-pthread'])
 cppfiles = env.Glob("*.cpp") +\
            env.Glob(os.path.join("unittest", "*.cpp"))
 
+env.AppendUnique(CPPPATH=os.path.join("#", "src"))
 env.AppendUnique(LINKFLAGS=['-pthread'])
-env.AppendUnique(LIBS=[rpclib, "grpc++", "protobuf", "pthread", "stdc++fs"])
+env.AppendUnique(LIBS=[rpclib, common, "grpc++", "protobuf", "pthread", "stdc++fs"])
 daemon = env.Program("fwdaemon", source=cppfiles)
 
 testresult = env.CatchTest("testreport.txt", daemon)

@@ -25,6 +25,7 @@
 */
 
 #include "server.h"
+#include "common/tee_output.h"
 
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
@@ -35,12 +36,19 @@ int main(int argc, const char* argv[])
 {
   auto run_unit_tests = false;
   std::vector<const char*> args(argv, argv + argc);
+  std::string tee_output_file;
   for (auto iter = args.begin(); iter != args.end();)
   {
     if (std::string_view(*iter) == "--run-unit-tests")
     {
       iter = args.erase(iter);
       run_unit_tests = true;
+    }
+    else if (std::string_view(*iter) == "--tee-output")
+    {
+      iter = args.erase(iter);
+      tee_output_file = *iter;
+      iter = args.erase(iter);
     }
     else
     {
@@ -50,6 +58,10 @@ int main(int argc, const char* argv[])
 
   if (run_unit_tests)
   {
+    std::unique_ptr<logging::TeeOutput> tee;
+    if (!tee_output_file.empty())
+      tee = std::make_unique<logging::TeeOutput>(tee_output_file);
+
     Catch::Session session;
     auto return_code = session.applyCommandLine(args.size(), &args[0]);
     if (return_code != 0)

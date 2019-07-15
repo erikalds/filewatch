@@ -18,7 +18,7 @@ def exists(env):
 
 
 def generate_catch_test_run(target, source, env, for_signature):
-    return "{ $SOURCE --run-unit-tests --use-colour no 2>&1 ; echo $$? > /tmp/${SOURCE.name}.status ; } | tee $TARGET && exit $$(cat /tmp/${SOURCE.name}.status)"
+    return "$SOURCE --run-unit-tests --use-colour no --tee-output $TARGET"
 
 
 def generate(env):

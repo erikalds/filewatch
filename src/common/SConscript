@@ -1,0 +1,7 @@
+Import('env')
+
+env = env.Clone()
+
+common = env.StaticLibrary('common', source=env.Glob("*.cpp"))
+
+Return('common')
