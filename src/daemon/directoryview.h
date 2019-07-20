@@ -3,6 +3,7 @@
 
 namespace filewatch {
   class DirList;
+  class FileList;
 }  // namespace filewatch
 
 namespace fw {
@@ -20,6 +21,7 @@ namespace fw {
       virtual ~DirectoryView() = 0;
 
       virtual status_code fill_dir_list(filewatch::DirList& response) const = 0;
+      virtual status_code fill_file_list(filewatch::FileList& response) const = 0;
     };
 
   }  // namespace dm

@@ -14,7 +14,7 @@ struct FileNode
     entry.mtime = mtime;
   }
 
-  fw::dm::FileSystem::DirectoryEntry entry;
+  fw::dm::fs::DirectoryEntry entry;
   std::unique_ptr<FileNode> child;
   std::unique_ptr<FileNode> sibling;
 };
@@ -133,8 +133,11 @@ public:
     insert_child(*node, std::make_unique<FileNode>(filename, false, mtime));
   }
 
-  std::deque<DirectoryEntry> ls(std::string_view entryname) const override
+  std::deque<fw::dm::fs::DirectoryEntry>
+  ls(std::string_view entryname) const override
   {
+    using fw::dm::fs::DirectoryEntry;
+
     auto node = find_node(entryname);
     if (!node)
       return std::deque<DirectoryEntry>{};
@@ -154,12 +157,12 @@ public:
     return entries;
   }
 
-  std::optional<DirectoryEntry>
+  std::optional<fw::dm::fs::DirectoryEntry>
   get_direntry(std::string_view entryname) const override
   {
     auto node = find_node(entryname);
     if (!node)
-      return std::optional<DirectoryEntry>();
+      return std::optional<fw::dm::fs::DirectoryEntry>();
 
     return node->entry;
   }

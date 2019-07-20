@@ -13,10 +13,19 @@ fw::dm::DirectoryWatcher::DirectoryWatcher(std::string_view dirname,
 namespace
 {
 
-  void set_mtime_of(filewatch::Directoryname& dn,
-                    const fw::dm::FileSystem::DirectoryEntry& entry)
+  template<typename ModificationTimeContainerT>
+  void set_mtime_of(ModificationTimeContainerT& mtc,
+                    const fw::dm::fs::DirectoryEntry& entry)
   {
-    dn.mutable_modification_time()->set_epoch(entry.mtime);
+    mtc.mutable_modification_time()->set_epoch(entry.mtime);
+  }
+
+  template<typename NameAndModificationTimeContainerT>
+  void set_name_and_mtime_of(NameAndModificationTimeContainerT& namtc,
+                             const fw::dm::fs::DirectoryEntry& entry)
+  {
+    namtc.set_name(entry.name);
+    set_mtime_of(namtc, entry);
   }
 
 }  // anonymous namespace
@@ -24,7 +33,44 @@ namespace
 fw::dm::status_code
 fw::dm::DirectoryWatcher::fill_dir_list(filewatch::DirList& response) const
 {
+  return fill_entry_list(response,
+                         [](const fs::DirectoryEntry& direntry)
+                         {
+                           return !direntry.is_dir;
+                         },
+                         [](filewatch::DirList& response,
+                            const fs::DirectoryEntry& direntry)
+                         {
+                           auto dn = response.add_dirnames();
+                           set_name_and_mtime_of(*dn, direntry);
+                         });
+}
+
+fw::dm::status_code
+fw::dm::DirectoryWatcher::fill_file_list(filewatch::FileList& response) const
+{
+  return fill_entry_list(response,
+                         [](const fs::DirectoryEntry& direntry)
+                         {
+                           return direntry.is_dir;
+                         },
+                         [](filewatch::FileList& response,
+                            const fs::DirectoryEntry& direntry)
+                         {
+                           auto fn = response.add_filenames();
+                           set_name_and_mtime_of(*fn, direntry);
+                         });
+}
+
+template<typename ResponseListT, typename AddEntryFunctionT>
+fw::dm::status_code
+fw::dm::DirectoryWatcher::
+fill_entry_list(ResponseListT& response,
+                FilterFunction filter,
+                AddEntryFunctionT add_entry) const
+{
   response.mutable_name()->set_name(dirname);
+
   if (!fs.exists(dirname))
     return status_code::NOT_FOUND;
 
@@ -35,12 +81,10 @@ fw::dm::DirectoryWatcher::fill_dir_list(filewatch::DirList& response) const
 
   for (auto direntry : fs.ls(dirname))
   {
-    if (!direntry.is_dir)
+    if (filter(direntry))
       continue;
 
-    auto dn = response.add_dirnames();
-    dn->set_name(direntry.name);
-    set_mtime_of(*dn, direntry);
+    add_entry(response, direntry);
   }
   return status_code::OK;
 }

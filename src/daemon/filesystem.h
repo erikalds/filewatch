@@ -10,11 +10,8 @@ namespace fw
 {
   namespace dm
   {
-
-    class FileSystem
+    namespace fs
     {
-    public:
-      virtual ~FileSystem() = 0;
 
       struct DirectoryEntry
       {
@@ -23,9 +20,17 @@ namespace fw
         uint64_t mtime;  // milliseconds since epoch
       };
 
-      virtual std::deque<DirectoryEntry> ls(std::string_view dirname) const = 0;
+    }  // namespace fs
 
-      virtual std::optional<DirectoryEntry>
+
+    class FileSystem
+    {
+    public:
+      virtual ~FileSystem() = 0;
+
+      virtual std::deque<fs::DirectoryEntry> ls(std::string_view dirname) const = 0;
+
+      virtual std::optional<fs::DirectoryEntry>
       get_direntry(std::string_view entryname) const = 0;
 
       virtual bool exists(std::string_view filename) const = 0;
