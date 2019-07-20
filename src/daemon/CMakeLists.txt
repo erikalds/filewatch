@@ -5,10 +5,18 @@ if(${CMAKE_VERSION} VERSION_LESS 3.12)
 endif()
 
 add_executable(fwdaemon
+  directoryview.cpp
+  directorywatcher.cpp
+  filesystem.cpp
   main.cpp
   server.cpp
-  unittest/testsomething.cpp
+  unittest/test_directorywatcher.cpp
+  unittest/test_filesystem.cpp
+  directoryview.h
+  directorywatcher.h
+  filesystem.h
   server.h
+  unittest/dummyfilesystem.h
   )
 target_include_directories(fwdaemon PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/../rpc_defs/rpcgen
