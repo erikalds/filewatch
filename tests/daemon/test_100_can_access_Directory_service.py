@@ -35,5 +35,5 @@ def run_test(tempdir):
     channel = grpc.insecure_channel('localhost:45678')
     stub = filewatch_pb2_grpc.DirectoryStub(channel)
     dirname = filewatch_pb2.Directoryname()
-    dirname.name = "."
+    dirname.name = "/"
     filelist = stub.ListFiles(dirname)

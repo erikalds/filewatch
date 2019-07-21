@@ -54,10 +54,13 @@ fw::dm::DirectoryWatcher::fill_file_list(filewatch::FileList& response) const
                          {
                            return direntry.is_dir;
                          },
-                         [](filewatch::FileList& response,
-                            const fs::DirectoryEntry& direntry)
+                         [&](filewatch::FileList& response,
+                             const fs::DirectoryEntry& direntry)
                          {
                            auto fn = response.add_filenames();
+                           fn->mutable_dirname()->set_name(this->dirname);
+                           set_mtime_of(*fn->mutable_dirname(),
+                                        *fs.get_direntry(this->dirname));
                            set_name_and_mtime_of(*fn, direntry);
                          });
 }
@@ -75,7 +78,7 @@ fill_entry_list(ResponseListT& response,
     return status_code::NOT_FOUND;
 
   if (!fs.isdir(dirname))
-    return status_code::NOT_FOUND;
+    return status_code::NOT_A_DIR;
 
   set_mtime_of(*response.mutable_name(), *fs.get_direntry(dirname));
 

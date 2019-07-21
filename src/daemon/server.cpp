@@ -26,6 +26,9 @@
 
 #include "server.h"
 
+#include "directoryview.h"
+#include "filesystemfactory.h"
+
 #include "filewatch.grpc.pb.h"
 
 #include <grpc++/server.h>
@@ -67,81 +70,50 @@ namespace fw
 
       };
 
-      int64_t mtime(const std::filesystem::path& p)
-      {
-        auto t = std::filesystem::last_write_time(p).time_since_epoch();
-        return std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
-      }
-
-      template<typename T>
-      void set_mtime_of(T& var, const std::filesystem::path& p)
-      {
-        var.mutable_modification_time()->set_epoch(mtime(p));
-      }
 
       class DirService : public filewatch::Directory::Service
       {
       public:
-        explicit DirService(const std::string& rootdir) : rootdir(rootdir) {}
+        explicit DirService(FileSystemFactory& factory) :
+          factory(factory) {}
 
-        ::grpc::Status ListFiles(::grpc::ServerContext* context,
+        ::grpc::Status ListFiles(::grpc::ServerContext* /*context*/,
                                  const ::filewatch::Directoryname* request,
                                  ::filewatch::FileList* response) override
         {
-          auto dir = rootdir / std::filesystem::path(request->name());
-          if (!std::filesystem::exists(dir))
-            return grpc::Status(grpc::NOT_FOUND,
-                                "'" + request->name() + "' does not exist");
-
-          if (!std::filesystem::is_directory(dir))
-            return grpc::Status(grpc::NOT_FOUND,
-                                "'" + request->name() + "' is not a directory");
-
-          response->mutable_name()->set_name(request->name());
-          set_mtime_of(*response->mutable_name(), dir);
-          for (auto& p : std::filesystem::directory_iterator(dir))
-          {
-            if (p.is_directory())
-              continue;
-
-            filewatch::Filename* fn = response->add_filenames();
-            fn->mutable_dirname()->set_name(request->name());
-            fn->set_name(p.path().filename().string());
-            set_mtime_of(*fn, p.path());
-          }
-          return grpc::Status::OK;
+          auto dirview = factory.create_directory(request->name());
+          return translate_status_code(dirview->fill_file_list(*response),
+                                       request->name());
         }
 
         ::grpc::Status
-        ListDirectories(::grpc::ServerContext* context,
+        ListDirectories(::grpc::ServerContext* /*context*/,
                         const ::filewatch::Directoryname* request,
                         ::filewatch::DirList* response) override
         {
-          auto dir = rootdir / std::filesystem::path(request->name());
-          if (!std::filesystem::exists(dir))
-            return grpc::Status(grpc::NOT_FOUND,
-                                "'" + request->name() + "' does not exist");
-
-          if (!std::filesystem::is_directory(dir))
-            return grpc::Status(grpc::NOT_FOUND,
-                                "'" + request->name() + "' is not a directory");
-
-          response->mutable_name()->set_name(request->name());
-          set_mtime_of(*response->mutable_name(), dir);
-          for (auto& p : std::filesystem::directory_iterator(dir))
-          {
-            if (!p.is_directory())
-              continue;
-
-            filewatch::Directoryname* dn = response->add_dirnames();
-            dn->set_name(p.path().filename().string());
-            set_mtime_of(*dn, p.path());
-          }
-          return grpc::Status::OK;
+          auto dirview = factory.create_directory(request->name());
+          return translate_status_code(dirview->fill_dir_list(*response),
+                                       request->name());
         }
 
       private:
-        std::filesystem::path rootdir;
+        ::grpc::Status translate_status_code(status_code sc,
+                                             std::string_view entryname) const
+        {
+          if (sc == status_code::OK)
+            return grpc::Status::OK;
+          else if (sc == status_code::NOT_FOUND)
+            return grpc::Status(grpc::NOT_FOUND,
+                                "'" + std::string(entryname) + "' does not exist");
+          else
+          {
+            assert(sc == status_code::NOT_A_DIR);
+            return grpc::Status(grpc::NOT_FOUND,
+                                "'" + std::string(entryname) + "' is not a directory");
+          }
+        }
+
+        FileSystemFactory& factory;
       };
 
       class FileService : public filewatch::File::Service
@@ -161,8 +133,9 @@ namespace fw
     class Services
     {
     public:
-      explicit Services(const std::string& rootdir) :
-        Directory(rootdir)
+      explicit Services(std::unique_ptr<FileSystemFactory> factory_) :
+        factory(std::move(factory_)),
+        Directory(*factory)
       {}
 
       void register_services(grpc::ServerBuilder& builder)
@@ -173,6 +146,7 @@ namespace fw
       }
 
     private:
+      std::unique_ptr<FileSystemFactory> factory;
       FWService FileWatch;
       DirService Directory;
       FileService File;
@@ -191,8 +165,8 @@ namespace fw
     }
 
 
-    Server::Server(const std::string& rootdir) :
-      services(std::make_unique<Services>(rootdir))
+    Server::Server(std::unique_ptr<FileSystemFactory> factory) :
+      services(std::make_unique<Services>(std::move(factory)))
     {
       g_server = this;
       std::signal(SIGTERM, signal_handler);

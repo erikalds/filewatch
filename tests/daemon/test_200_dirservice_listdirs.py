@@ -45,18 +45,18 @@ class TestCase(unittest.TestCase):
 
     def test_dirs_in_root_dir(self):
         dirname = filewatch_pb2.Directoryname()
-        dirname.name = "."
+        dirname.name = "/"
         dirlist = self.stub.ListDirectories(dirname)
-        self.assertEquals(".", dirlist.name.name)
-        self.assertEquals(2, len(dirlist.dirnames))
+        self.assertEquals("/", dirlist.name.name)
         self.assertEquals(set(["dir1", "dir2"]),
                           set([dname.name for dname in dirlist.dirnames]))
+        self.assertEquals(2, len(dirlist.dirnames))
 
     def test_dirs_in_sub_dir(self):
         dirname = filewatch_pb2.Directoryname()
-        dirname.name = "dir1"
+        dirname.name = "/dir1"
         dirlist = self.stub.ListDirectories(dirname)
-        self.assertEquals("dir1", dirlist.name.name)
+        self.assertEquals("/dir1", dirlist.name.name)
         self.assertEquals(3, len(dirlist.dirnames))
         self.assertEquals(set(["dir3", "dir4", "dir5"]),
                           set([dname.name for dname in dirlist.dirnames]))
@@ -68,7 +68,7 @@ class TestCase(unittest.TestCase):
                  os.path.join("dir1", "dir5")]
         expected = { name : fs.mtime(name) for name in dirs }
         dirname = filewatch_pb2.Directoryname()
-        dirname.name = "."
+        dirname.name = "/"
         dirlist = self.stub.ListDirectories(dirname)
         self.assertEquals(dirlist.name.modification_time.epoch,
                           fs.mtime("."))
@@ -76,7 +76,7 @@ class TestCase(unittest.TestCase):
             self.assertEquals(expected[dname.name],
                               dname.modification_time.epoch)
 
-        dirname.name = "dir1"
+        dirname.name = "/dir1"
         dirlist = self.stub.ListDirectories(dirname)
         self.assertEquals(dirlist.name.modification_time.epoch,
                           fs.mtime("dir1"))
@@ -86,18 +86,18 @@ class TestCase(unittest.TestCase):
 
     def test_non_existing_directory(self):
         dirname = filewatch_pb2.Directoryname()
-        dirname.name = "not_existing_dir"
+        dirname.name = "/not_existing_dir"
         with self.assertRaisesRegex(Exception,
-                                    "'not_existing_dir' does not exist") as cm:
+                                    "'/not_existing_dir' does not exist") as cm:
             dirlist = self.stub.ListDirectories(dirname)
 
         self.assertEquals(grpc.StatusCode.NOT_FOUND, cm.exception.code())
 
     def test_error_on_existing_file(self):
         dirname = filewatch_pb2.Directoryname()
-        dirname.name = "file1.txt"
+        dirname.name = "/file1.txt"
         with self.assertRaisesRegex(Exception,
-                                    "'file1.txt' is not a directory") as cm:
+                                    "'/file1.txt' is not a directory") as cm:
             dirlist = self.stub.ListDirectories(dirname)
 
         self.assertEquals(grpc.StatusCode.NOT_FOUND, cm.exception.code())

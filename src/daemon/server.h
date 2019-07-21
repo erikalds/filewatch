@@ -36,12 +36,13 @@ namespace fw
   namespace dm
   {
 
+    class FileSystemFactory;
     class Services;
 
     class Server
     {
     public:
-      explicit Server(const std::string& rootdir);
+      explicit Server(std::unique_ptr<FileSystemFactory> factory);
       ~Server();
 
       int run();

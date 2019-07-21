@@ -12,7 +12,8 @@ namespace fw {
     enum class status_code
     {
       OK,
-      NOT_FOUND
+      NOT_FOUND,
+      NOT_A_DIR
     };
 
     class DirectoryView

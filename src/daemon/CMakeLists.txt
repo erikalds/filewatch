@@ -5,16 +5,23 @@ if(${CMAKE_VERSION} VERSION_LESS 3.12)
 endif()
 
 add_executable(fwdaemon
+  defaultfilesystem.cpp
   directoryview.cpp
   directorywatcher.cpp
   filesystem.cpp
+  filesystemfactory.cpp
+  filesystemwatcherfactory.cpp
   main.cpp
   server.cpp
   unittest/test_directorywatcher.cpp
   unittest/test_filesystem.cpp
+  unittest/test_filesystemwatcherfactory.cpp
+  defaultfilesystem.h
   directoryview.h
   directorywatcher.h
   filesystem.h
+  filesystemfactory.h
+  filesystemwatcherfactory.h
   server.h
   unittest/dummyfilesystem.h
   )

@@ -25,6 +25,8 @@
 */
 
 #include "server.h"
+#include "defaultfilesystem.h"
+#include "filesystemwatcherfactory.h"
 #include "common/tee_output.h"
 
 #define CATCH_CONFIG_RUNNER
@@ -76,6 +78,9 @@ int main(int argc, const char* argv[])
     return -1;
   }
 
-  fw::dm::Server server(args[1]);
+  auto fs = std::make_unique<fw::dm::DefaultFileSystem>(args[1]);
+  auto factory = std::make_unique<fw::dm::FileSystemWatcherFactory>(std::move(fs));
+
+  fw::dm::Server server(std::move(factory));
   return server.run();
 }

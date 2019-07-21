@@ -51,7 +51,7 @@ TEST_CASE("fill subdir directory list", "[DirectoryWatcher]")
   SECTION("Sought directory is a file")
   {
     fs.add_file("/", "subdir", 3456);
-    CHECK(fw::dm::status_code::NOT_FOUND == dw.fill_dir_list(response));
+    CHECK(fw::dm::status_code::NOT_A_DIR == dw.fill_dir_list(response));
     CHECK(response.dirnames_size() == 0);
   }
 
@@ -114,7 +114,7 @@ TEST_CASE("fill directory list sets dirname", "[DirectoryWatcher]")
 
 TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
 {
-  DummyFileSystem fs;
+  DummyFileSystem fs(564321);
   filewatch::FileList response;
   fw::dm::DirectoryWatcher dw("/", fs);
 
@@ -131,6 +131,8 @@ TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
     REQUIRE(response.filenames().size() == 1);
     CHECK(response.filenames(0).name() == "my file.txt");
     CHECK(response.filenames(0).modification_time().epoch() == 24356);
+    CHECK(response.filenames(0).dirname().name() == "/");
+    CHECK(response.filenames(0).dirname().modification_time().epoch() == 564321);
   }
 
   SECTION("one file and one directory in root dir")
@@ -141,6 +143,8 @@ TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
     REQUIRE(response.filenames().size() == 1);
     CHECK(response.filenames(0).name() == "some-file.cpp");
     CHECK(response.filenames(0).modification_time().epoch() == 683902893);
+    CHECK(response.filenames(0).dirname().name() == "/");
+    CHECK(response.filenames(0).dirname().modification_time().epoch() == 564321);
   }
 }
 
@@ -159,7 +163,7 @@ TEST_CASE("fill subdir file list", "[DirectoryWatcher]")
   SECTION("Sought directory is a file")
   {
     fs.add_file("/", "subdir", 3456);
-    CHECK(fw::dm::status_code::NOT_FOUND == dw.fill_file_list(response));
+    CHECK(fw::dm::status_code::NOT_A_DIR == dw.fill_file_list(response));
     CHECK(response.filenames_size() == 0);
   }
 
@@ -180,8 +184,12 @@ TEST_CASE("fill subdir file list", "[DirectoryWatcher]")
     REQUIRE(response.filenames_size() == 2);
     CHECK(response.filenames(0).name() == "file0.cpp");
     CHECK(response.filenames(0).modification_time().epoch() == 345678);
+    CHECK(response.filenames(0).dirname().name() == "/subdir");
+    CHECK(response.filenames(0).dirname().modification_time().epoch() == 4632);
     CHECK(response.filenames(1).name() == "file0.h");
     CHECK(response.filenames(1).modification_time().epoch() == 983982);
+    CHECK(response.filenames(1).dirname().name() == "/subdir");
+    CHECK(response.filenames(1).dirname().modification_time().epoch() == 4632);
   }
 }
 
