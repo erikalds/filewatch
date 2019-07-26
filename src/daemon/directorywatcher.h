@@ -23,14 +23,14 @@ namespace fw
     public:
       DirectoryWatcher(std::string_view dirname, const FileSystem& fs);
 
-      status_code fill_dir_list(filewatch::DirList& response) const override;
-      status_code fill_file_list(filewatch::FileList& response) const override;
+      grpc::Status fill_dir_list(filewatch::DirList& response) const override;
+      grpc::Status fill_file_list(filewatch::FileList& response) const override;
 
     private:
       typedef std::function<bool(const fs::DirectoryEntry&)> FilterFunction;
 
       template<typename ResponseListT, typename AddEntryFunctionT>
-      status_code
+      grpc::Status
       fill_entry_list(ResponseListT& response,
                       FilterFunction filter,
                       AddEntryFunctionT add_entry) const;

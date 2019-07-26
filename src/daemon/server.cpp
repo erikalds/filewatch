@@ -82,8 +82,7 @@ namespace fw
                                  ::filewatch::FileList* response) override
         {
           auto dirview = factory.create_directory(request->name());
-          return translate_status_code(dirview->fill_file_list(*response),
-                                       request->name());
+          return dirview->fill_file_list(*response);
         }
 
         ::grpc::Status
@@ -92,25 +91,7 @@ namespace fw
                         ::filewatch::DirList* response) override
         {
           auto dirview = factory.create_directory(request->name());
-          return translate_status_code(dirview->fill_dir_list(*response),
-                                       request->name());
-        }
-
-      private:
-        ::grpc::Status translate_status_code(status_code sc,
-                                             std::string_view entryname) const
-        {
-          if (sc == status_code::OK)
-            return grpc::Status::OK;
-          else if (sc == status_code::NOT_FOUND)
-            return grpc::Status(grpc::NOT_FOUND,
-                                "'" + std::string(entryname) + "' does not exist");
-          else
-          {
-            assert(sc == status_code::NOT_A_DIR);
-            return grpc::Status(grpc::NOT_FOUND,
-                                "'" + std::string(entryname) + "' is not a directory");
-          }
+          return dirview->fill_dir_list(*response);
         }
 
         FileSystemFactory& factory;

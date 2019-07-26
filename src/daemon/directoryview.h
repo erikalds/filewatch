@@ -6,23 +6,20 @@ namespace filewatch {
   class FileList;
 }  // namespace filewatch
 
-namespace fw {
-  namespace dm {
+namespace grpc { class Status; }
 
-    enum class status_code
-    {
-      OK,
-      NOT_FOUND,
-      NOT_A_DIR
-    };
+namespace fw
+{
+  namespace dm
+  {
 
     class DirectoryView
     {
     public:
       virtual ~DirectoryView() = 0;
 
-      virtual status_code fill_dir_list(filewatch::DirList& response) const = 0;
-      virtual status_code fill_file_list(filewatch::FileList& response) const = 0;
+      virtual grpc::Status fill_dir_list(filewatch::DirList& response) const = 0;
+      virtual grpc::Status fill_file_list(filewatch::FileList& response) const = 0;
     };
 
   }  // namespace dm

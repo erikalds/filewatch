@@ -2,6 +2,7 @@
 
 #include "filesystem.h"
 #include "filewatch.pb.h"
+#include <grpcpp/impl/codegen/status.h>
 
 fw::dm::DirectoryWatcher::DirectoryWatcher(std::string_view dirname,
                                            const FileSystem& fs) :
@@ -30,7 +31,7 @@ namespace
 
 }  // anonymous namespace
 
-fw::dm::status_code
+grpc::Status
 fw::dm::DirectoryWatcher::fill_dir_list(filewatch::DirList& response) const
 {
   return fill_entry_list(response,
@@ -46,7 +47,7 @@ fw::dm::DirectoryWatcher::fill_dir_list(filewatch::DirList& response) const
                          });
 }
 
-fw::dm::status_code
+grpc::Status
 fw::dm::DirectoryWatcher::fill_file_list(filewatch::FileList& response) const
 {
   return fill_entry_list(response,
@@ -66,7 +67,7 @@ fw::dm::DirectoryWatcher::fill_file_list(filewatch::FileList& response) const
 }
 
 template<typename ResponseListT, typename AddEntryFunctionT>
-fw::dm::status_code
+grpc::Status
 fw::dm::DirectoryWatcher::
 fill_entry_list(ResponseListT& response,
                 FilterFunction filter,
@@ -75,10 +76,10 @@ fill_entry_list(ResponseListT& response,
   response.mutable_name()->set_name(dirname);
 
   if (!fs.exists(dirname))
-    return status_code::NOT_FOUND;
+    return grpc::Status(grpc::NOT_FOUND, "'" + dirname + "' does not exist");
 
   if (!fs.isdir(dirname))
-    return status_code::NOT_A_DIR;
+    return grpc::Status(grpc::NOT_FOUND, "'" + dirname + "' is not a directory");
 
   set_mtime_of(*response.mutable_name(), *fs.get_direntry(dirname));
 
@@ -89,5 +90,5 @@ fill_entry_list(ResponseListT& response,
 
     add_entry(response, direntry);
   }
-  return status_code::OK;
+  return grpc::Status::OK;
 }
