@@ -19,8 +19,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_SRC_DIR} ${PROTOS})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${PROTO_SRC_DIR} ${PROTOS})
 
 add_library(filewatch_rpc ${PROTO_SRCS} ${GRPC_SRCS})
-target_link_libraries(filewatch_rpc
+target_link_libraries(filewatch_rpc PRIVATE project_warnings project_options
   gRPC::grpc++_reflection
   protobuf::libprotobuf
   )
-target_compile_features(filewatch_rpc PUBLIC cxx_std_17)

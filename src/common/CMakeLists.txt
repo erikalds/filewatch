@@ -8,7 +8,7 @@ add_library(common
   tee_output.cpp
   tee_output.h
   )
-target_compile_features(common PUBLIC cxx_std_17)
+target_link_libraries(common PRIVATE project_warnings project_options)
 
 # add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"
 #   COMMAND ./fwdaemon --run-unit-tests --use-colour no --tee-output "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"
