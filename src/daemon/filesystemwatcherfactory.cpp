@@ -3,8 +3,8 @@
 #include "daemon/directorywatcher.h"
 #include "daemon/filesystem.h"
 
-fw::dm::FileSystemWatcherFactory::FileSystemWatcherFactory(std::unique_ptr<FileSystem> fs) :
-  fs(std::move(fs))
+fw::dm::FileSystemWatcherFactory::FileSystemWatcherFactory(std::unique_ptr<FileSystem> fs_) :
+  fs(std::move(fs_))
 {
 }
 

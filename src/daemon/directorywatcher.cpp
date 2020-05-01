@@ -4,10 +4,10 @@
 #include "filewatch.pb.h"
 #include <grpcpp/impl/codegen/status.h>
 
-fw::dm::DirectoryWatcher::DirectoryWatcher(std::string_view dirname,
-                                           const FileSystem& fs) :
-  dirname(dirname),
-  fs(fs)
+fw::dm::DirectoryWatcher::DirectoryWatcher(std::string_view dirname_,
+                                           const FileSystem& fs_) :
+  dirname(dirname_),
+  fs(fs_)
 {
 }
 
@@ -39,10 +39,10 @@ fw::dm::DirectoryWatcher::fill_dir_list(filewatch::DirList& response) const
                          {
                            return !direntry.is_dir;
                          },
-                         [](filewatch::DirList& response,
+                         [](filewatch::DirList& resp,
                             const fs::DirectoryEntry& direntry)
                          {
-                           auto dn = response.add_dirnames();
+                           auto dn = resp.add_dirnames();
                            set_name_and_mtime_of(*dn, direntry);
                          });
 }
@@ -55,10 +55,10 @@ fw::dm::DirectoryWatcher::fill_file_list(filewatch::FileList& response) const
                          {
                            return direntry.is_dir;
                          },
-                         [&](filewatch::FileList& response,
+                         [&](filewatch::FileList& resp,
                              const fs::DirectoryEntry& direntry)
                          {
-                           auto fn = response.add_filenames();
+                           auto fn = resp.add_filenames();
                            fn->mutable_dirname()->set_name(this->dirname);
                            set_mtime_of(*fn->mutable_dirname(),
                                         *fs.get_direntry(this->dirname));

@@ -20,7 +20,7 @@ namespace logging
       }
 
       void put(std::basic_streambuf<char>::int_type ch)
-      { out_stream.rdbuf()->sputc(ch); }
+      { out_stream.rdbuf()->sputc(static_cast<char>(ch)); }
 
     private:
       std::ofstream out_stream;
@@ -29,9 +29,9 @@ namespace logging
     class CapturingRdbuf : public std::basic_streambuf<char>
     {
     public:
-      CapturingRdbuf(FileOutput& output, std::ostream& stream) :
-        output(output),
-        stream(stream)
+      CapturingRdbuf(FileOutput& output_, std::ostream& stream_) :
+        output(output_),
+        stream(stream_)
       {
         orig_rdbuf = stream.rdbuf(this);
       }
@@ -42,7 +42,7 @@ namespace logging
 
       std::basic_streambuf<char>::int_type overflow(int_type ch) override
       {
-        orig_rdbuf->sputc(ch);
+        orig_rdbuf->sputc(static_cast<char>(ch));
         output.put(ch);
         return 0;
       }

@@ -50,8 +50,8 @@ namespace fw
       class FWService : public filewatch::FileWatch::Service
       {
       public:
-        ::grpc::Status GetStatus(::grpc::ServerContext* context,
-                                 const ::filewatch::Void* request,
+        ::grpc::Status GetStatus(::grpc::ServerContext* /*context*/,
+                                 const ::filewatch::Void* /*request*/,
                                  ::filewatch::FileWatchStatus* response) override
         {
           response->set_status(filewatch::FileWatchStatus::OK);
@@ -59,8 +59,8 @@ namespace fw
           return grpc::Status::OK;
         }
 
-        ::grpc::Status GetVersion(::grpc::ServerContext* context,
-                                  const ::filewatch::Void* request,
+        ::grpc::Status GetVersion(::grpc::ServerContext* /*context*/,
+                                  const ::filewatch::Void* /*request*/,
                                   ::filewatch::Version* response) override
         {
           response->set_major(1);
@@ -75,8 +75,8 @@ namespace fw
       class DirService : public filewatch::Directory::Service
       {
       public:
-        explicit DirService(FileSystemFactory& factory) :
-          factory(factory) {}
+        explicit DirService(FileSystemFactory& factory_) :
+          factory(factory_) {}
 
         ::grpc::Status ListFiles(::grpc::ServerContext* /*context*/,
                                  const ::filewatch::Directoryname* request,
@@ -101,9 +101,9 @@ namespace fw
       class FileService : public filewatch::File::Service
       {
       public:
-        ::grpc::Status GetContents(::grpc::ServerContext* context,
-                                   const ::filewatch::Filename* request,
-                                   ::filewatch::FileContent* response) override
+        ::grpc::Status GetContents(::grpc::ServerContext* /*context*/,
+                                   const ::filewatch::Filename* /*request*/,
+                                   ::filewatch::FileContent* /*response*/) override
         {
           return grpc::Status::OK;
         }

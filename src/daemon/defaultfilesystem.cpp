@@ -1,8 +1,8 @@
 #include "defaultfilesystem.h"
 
 
-fw::dm::DefaultFileSystem::DefaultFileSystem(std::string_view rootdir) :
-  rootdir(std::filesystem::absolute(std::filesystem::path(rootdir)))
+fw::dm::DefaultFileSystem::DefaultFileSystem(std::string_view rootdir_) :
+  rootdir(std::filesystem::absolute(std::filesystem::path(rootdir_)))
 {
 }
 
@@ -44,6 +44,6 @@ fw::dm::DefaultFileSystem::create_direntry(const std::filesystem::path& p) const
   dirent.name = p.filename().string();
   dirent.is_dir = std::filesystem::is_directory(p);
   auto t = std::filesystem::last_write_time(p).time_since_epoch();
-  dirent.mtime = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+  dirent.mtime = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(t).count());
   return dirent;
 }
