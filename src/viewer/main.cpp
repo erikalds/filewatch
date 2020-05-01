@@ -34,7 +34,7 @@
 
 
 static constexpr auto USAGE =
-  R"(filewatcher viewer.
+  R"(filewatch viewer.
 
 Usage:
     filewatcher
@@ -58,7 +58,7 @@ int main(int argc, const char* argv[])
     = docopt::docopt(USAGE,
                      { std::next(argv), std::next(argv, argc) },
                      true,  // show help if requested
-                     "filewatcher 0.1");  // version string
+                     "filewatch 0.1");  // version string
 
   if (args["--run-unit-tests"].asBool() == true)
   {

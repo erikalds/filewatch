@@ -34,10 +34,12 @@
 
 #include <docopt/docopt.h>
 
+#include <spdlog/spdlog.h>
+
 #include <vector>
 
 static constexpr auto USAGE =
-  R"(filewatcher daemon.
+  R"(filewatch daemon.
 
 Usage:
     fwdaemon DIR
@@ -80,6 +82,7 @@ int main(int argc, const char* argv[])
     return session.run();
   }
 
+  spdlog::info("filewatch 0.1 daemon monitoring {}", args["DIR"].asString());
   auto fs = std::make_unique<fw::dm::DefaultFileSystem>(args["DIR"].asString());
   auto factory = std::make_unique<fw::dm::FileSystemWatcherFactory>(std::move(fs));
 

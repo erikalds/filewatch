@@ -31,12 +31,13 @@
 
 #include "filewatch.grpc.pb.h"
 
+#include <spdlog/spdlog.h>
+
 #include <grpc++/server.h>
 #include <grpc++/server_builder.h>
 #include <grpc++/security/server_credentials.h>
 #include <csignal>
 #include <filesystem>
-#include <iostream>
 
 namespace fw
 {
@@ -168,13 +169,14 @@ namespace fw
                                grpc::InsecureServerCredentials());
       services->register_services(builder);
       server = builder.BuildAndStart();
+      spdlog::info("server listening at localhost:45678");
       server->Wait();
       return 0;
     }
 
     void Server::stop()
     {
-      std::cout << "Terminating filewatch daemon" << std::endl;
+      spdlog::info("filewatch server daemon terminating");
       server->Shutdown();
     }
 
