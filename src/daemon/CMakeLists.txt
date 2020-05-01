@@ -34,6 +34,7 @@ target_link_libraries(fwdaemon PRIVATE project_warnings project_options
   common
   pthread
   stdc++fs
+  CONAN_PKG::catch2
   )
 
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"

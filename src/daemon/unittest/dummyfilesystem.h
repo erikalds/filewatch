@@ -2,7 +2,7 @@
 #define DUMMYFILESYSTEM_H
 
 #include "daemon/filesystem.h"
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 #include <set>
 
 struct FileNode

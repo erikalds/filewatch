@@ -15,6 +15,7 @@ target_include_directories(filewatcher PRIVATE
 target_link_libraries(filewatcher PRIVATE project_warnings project_options
   filewatch_rpc
   common
+  CONAN_PKG::catch2
   )
 
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"
