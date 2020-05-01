@@ -28,40 +28,49 @@
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
 
+#include <docopt/docopt.h>
+
 #include <vector>
+
+
+static constexpr auto USAGE =
+  R"(filewatcher viewer.
+
+Usage:
+    filewatcher
+    filewatcher --run-unit-tests [--tee-output=FILE] [--use-colour=(auto|yes|no)]
+    filewatcher (-h | --help)
+    filewatcher --version
+
+Options:
+    --run-unit-tests            Run the unit tests.
+    --tee-output=FILE           Put test output in FILE as well as stderr/stdout.
+    --use-colour=(auto|yes|no)  Use colour in output.
+    -h --help                   Show this screen.
+    --version                   Show version.
+)";
+
+std::vector<const char*> filter_args(int argc, const char** argv);
 
 int main(int argc, const char* argv[])
 {
-  auto run_unit_tests = false;
-  std::vector<const char*> args(argv, argv + argc);
-  std::string tee_output_file;
-  for (auto iter = args.begin(); iter != args.end();)
-  {
-    if (std::string_view(*iter) == "--run-unit-tests")
-    {
-      iter = args.erase(iter);
-      run_unit_tests = true;
-    }
-    else if (std::string_view(*iter) == "--tee-output")
-    {
-      iter = args.erase(iter);
-      tee_output_file = *iter;
-      iter = args.erase(iter);
-    }
-    else
-    {
-      ++iter;
-    }
-  }
+  std::map<std::string, docopt::value> args
+    = docopt::docopt(USAGE,
+                     { std::next(argv), std::next(argv, argc) },
+                     true,  // show help if requested
+                     "filewatcher 0.1");  // version string
 
-  if (run_unit_tests)
+  if (args["--run-unit-tests"].asBool() == true)
   {
     std::unique_ptr<logging::TeeOutput> tee;
-    if (!tee_output_file.empty())
-      tee = std::make_unique<logging::TeeOutput>(tee_output_file);
+    auto tee_output = args["--tee-output"];
+    if (tee_output)
+      tee = std::make_unique<logging::TeeOutput>(tee_output.asString());
 
     Catch::Session session;
-    auto return_code = session.applyCommandLine(args.size(), &args[0]);
+    std::vector<const char*> rawargs = filter_args(argc, argv);
+    auto return_code = session.applyCommandLine(static_cast<int>(rawargs.size()),
+                                                &rawargs[0]);
     if (return_code != 0)
       return return_code;
 
@@ -69,4 +78,27 @@ int main(int argc, const char* argv[])
   }
 
   return 0;
+}
+
+
+std::vector<const char*> filter_args(int argc, const char** argv)
+{
+  std::vector<const char*> rawargs(argv, argv + argc);
+  for (auto iter = rawargs.begin(); iter != rawargs.end();)
+  {
+    if (std::string_view(*iter) == "--run-unit-tests")
+    {
+      iter = rawargs.erase(iter);
+    }
+    else if (std::string_view(*iter) == "--tee-output")
+    {
+      iter = rawargs.erase(iter);
+      iter = rawargs.erase(iter);
+    }
+    else
+    {
+      ++iter;
+    }
+  }
+  return rawargs;
 }

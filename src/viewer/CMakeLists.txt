@@ -16,6 +16,7 @@ target_link_libraries(filewatcher PRIVATE project_warnings project_options
   filewatch_rpc
   common
   CONAN_PKG::catch2
+  CONAN_PKG::docopt.cpp
   )
 
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"
