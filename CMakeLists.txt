@@ -20,6 +20,9 @@ add_library(project_warnings INTERFACE)
 include(cmake/CompilerWarnings.cmake)
 set_project_warnings(project_warnings)
 
+# allow for static analysis options
+include(cmake/StaticAnalyzers.cmake)
+
 # Set up some extra Conan dependencies based on our needs
 # before loading Conan
 set(CONAN_EXTRA_REQUIRES "")
