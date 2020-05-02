@@ -27,6 +27,10 @@ include(cmake/StaticAnalyzers.cmake)
 include(cmake/Sanitizers.cmake)
 enable_sanitizers(project_options)
 
+# enable doxygen
+include(cmake/Doxygen.cmake)
+enable_doxygen()
+
 # Set up some extra Conan dependencies based on our needs
 # before loading Conan
 set(CONAN_EXTRA_REQUIRES "")
