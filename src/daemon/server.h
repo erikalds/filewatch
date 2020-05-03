@@ -29,13 +29,15 @@
 
 #include <memory>
 
-namespace grpc { class Server; }
+namespace grpc
+{
+  class Server;
+}
 
 namespace fw
 {
   namespace dm
   {
-
     class FileSystemFactory;
     class Services;
 
@@ -53,7 +55,7 @@ namespace fw
       std::unique_ptr<grpc::Server> server;
     };
 
-  }  // dm
-} // namespace fw
+  }  // namespace dm
+}  // namespace fw
 
-#endif // SERVER_H_
+#endif  // SERVER_H_

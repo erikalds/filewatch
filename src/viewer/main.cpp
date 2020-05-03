@@ -26,9 +26,9 @@
 #include "common/tee_output.h"
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-
 #include <docopt/docopt.h>
+
+#include <catch2/catch.hpp>
 
 #include <vector>
 
@@ -54,11 +54,11 @@ std::vector<const char*> filter_args(int argc, const char** argv);
 
 int main(int argc, const char* argv[])
 {
-  std::map<std::string, docopt::value> args
-    = docopt::docopt(USAGE,
-                     { std::next(argv), std::next(argv, argc) },
-                     true,  // show help if requested
-                     "filewatch 0.1");  // version string
+  std::map<std::string, docopt::value> args =
+    docopt::docopt(USAGE,
+                   {std::next(argv), std::next(argv, argc)},
+                   true,  // show help if requested
+                   "filewatch 0.1");  // version string
 
   if (args["--run-unit-tests"].asBool() == true)
   {
@@ -69,8 +69,8 @@ int main(int argc, const char* argv[])
 
     Catch::Session session;
     std::vector<const char*> rawargs = filter_args(argc, argv);
-    auto return_code = session.applyCommandLine(static_cast<int>(rawargs.size()),
-                                                &rawargs[0]);
+    auto return_code =
+      session.applyCommandLine(static_cast<int>(rawargs.size()), &rawargs[0]);
     if (return_code != 0)
       return return_code;
 

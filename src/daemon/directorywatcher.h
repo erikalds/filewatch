@@ -2,6 +2,7 @@
 #define DIRECTORYWATCHER_H
 
 #include "daemon/directoryview.h"
+
 #include <functional>
 #include <string>
 #include <string_view>
@@ -30,10 +31,9 @@ namespace fw
       typedef std::function<bool(const fs::DirectoryEntry&)> FilterFunction;
 
       template<typename ResponseListT, typename AddEntryFunctionT>
-      grpc::Status
-      fill_entry_list(ResponseListT& response,
-                      FilterFunction filter,
-                      AddEntryFunctionT add_entry) const;
+      grpc::Status fill_entry_list(ResponseListT& response,
+                                   FilterFunction filter,
+                                   AddEntryFunctionT add_entry) const;
 
       std::string dirname;
       const FileSystem& fs;

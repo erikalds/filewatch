@@ -2,7 +2,9 @@
 #define DUMMYFILESYSTEM_H
 
 #include "daemon/filesystem.h"
+
 #include <catch2/catch.hpp>
+
 #include <set>
 
 struct FileNode
@@ -22,7 +24,7 @@ struct FileNode
 class DummyFileSystem : public fw::dm::FileSystem
 {
 public:
-  DummyFileSystem(uint64_t root_mtime=12345) : root("/", true, root_mtime) {}
+  DummyFileSystem(uint64_t root_mtime = 12345) : root("/", true, root_mtime) {}
 
   FileNode root;
 
@@ -177,7 +179,6 @@ public:
     auto node = find_node(dirname);
     return node != nullptr && node->entry.is_dir == true;
   }
-
 };
 
 #endif /* DUMMYFILESYSTEM_H */

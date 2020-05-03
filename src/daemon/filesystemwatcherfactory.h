@@ -7,7 +7,6 @@ namespace fw
 {
   namespace dm
   {
-
     class FileSystem;
 
 

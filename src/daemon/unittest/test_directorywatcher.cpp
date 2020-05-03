@@ -1,8 +1,8 @@
-#include <catch2/catch.hpp>
-
-#include "dummyfilesystem.h"
 #include "daemon/directorywatcher.h"
+#include "dummyfilesystem.h"
 #include "filewatch.pb.h"
+
+#include <catch2/catch.hpp>
 #include <grpcpp/impl/codegen/status.h>
 
 TEST_CASE("fill root dir directory list", "[DirectoryWatcher]")
@@ -118,7 +118,6 @@ TEST_CASE("fill directory list sets dirname", "[DirectoryWatcher]")
 }
 
 
-
 TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
 {
   DummyFileSystem fs(564321);
@@ -139,7 +138,8 @@ TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
     CHECK(response.filenames(0).name() == "my file.txt");
     CHECK(response.filenames(0).modification_time().epoch() == 24356);
     CHECK(response.filenames(0).dirname().name() == "/");
-    CHECK(response.filenames(0).dirname().modification_time().epoch() == 564321);
+    CHECK(response.filenames(0).dirname().modification_time().epoch()
+          == 564321);
   }
 
   SECTION("one file and one directory in root dir")
@@ -151,7 +151,8 @@ TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
     CHECK(response.filenames(0).name() == "some-file.cpp");
     CHECK(response.filenames(0).modification_time().epoch() == 683902893);
     CHECK(response.filenames(0).dirname().name() == "/");
-    CHECK(response.filenames(0).dirname().modification_time().epoch() == 564321);
+    CHECK(response.filenames(0).dirname().modification_time().epoch()
+          == 564321);
   }
 }
 

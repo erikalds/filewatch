@@ -28,14 +28,13 @@
 
 #include "directoryview.h"
 #include "filesystemfactory.h"
-
 #include "filewatch.grpc.pb.h"
 
-#include <spdlog/spdlog.h>
-
+#include <grpc++/security/server_credentials.h>
 #include <grpc++/server.h>
 #include <grpc++/server_builder.h>
-#include <grpc++/security/server_credentials.h>
+#include <spdlog/spdlog.h>
+
 #include <csignal>
 #include <filesystem>
 
@@ -43,16 +42,15 @@ namespace fw
 {
   namespace dm
   {
-
     namespace
     {
-
       class FWService : public filewatch::FileWatch::Service
       {
       public:
-        ::grpc::Status GetStatus(::grpc::ServerContext* /*context*/,
-                                 const ::filewatch::Void* /*request*/,
-                                 ::filewatch::FileWatchStatus* response) override
+        ::grpc::Status
+        GetStatus(::grpc::ServerContext* /*context*/,
+                  const ::filewatch::Void* /*request*/,
+                  ::filewatch::FileWatchStatus* response) override
         {
           response->set_status(filewatch::FileWatchStatus::OK);
           response->set_msg("up-and-running");
@@ -68,15 +66,13 @@ namespace fw
           response->set_revision(0);
           return grpc::Status::OK;
         }
-
       };
 
 
       class DirService : public filewatch::Directory::Service
       {
       public:
-        explicit DirService(FileSystemFactory& factory_) :
-          factory(factory_) {}
+        explicit DirService(FileSystemFactory& factory_) : factory(factory_) {}
 
         ::grpc::Status ListFiles(::grpc::ServerContext* /*context*/,
                                  const ::filewatch::Directoryname* request,
@@ -101,9 +97,10 @@ namespace fw
       class FileService : public filewatch::File::Service
       {
       public:
-        ::grpc::Status GetContents(::grpc::ServerContext* /*context*/,
-                                   const ::filewatch::Filename* /*request*/,
-                                   ::filewatch::FileContent* /*response*/) override
+        ::grpc::Status
+        GetContents(::grpc::ServerContext* /*context*/,
+                    const ::filewatch::Filename* /*request*/,
+                    ::filewatch::FileContent* /*response*/) override
         {
           return grpc::Status::OK;
         }
@@ -116,9 +113,9 @@ namespace fw
     {
     public:
       explicit Services(std::unique_ptr<FileSystemFactory> factory_) :
-        factory(std::move(factory_)),
-        Directory(*factory)
-      {}
+        factory(std::move(factory_)), Directory(*factory)
+      {
+      }
 
       void register_services(grpc::ServerBuilder& builder)
       {
@@ -180,5 +177,5 @@ namespace fw
       server->Shutdown();
     }
 
-  }  // dm
-}  // fw
+  }  // namespace dm
+}  // namespace fw

@@ -1,8 +1,8 @@
-#include <catch2/catch.hpp>
-
-#include "dummyfilesystem.h"
 #include "daemon/directoryview.h"
 #include "daemon/filesystemwatcherfactory.h"
+#include "dummyfilesystem.h"
+
+#include <catch2/catch.hpp>
 
 TEST_CASE("create_directory", "[filesystemwatcherfactory]")
 {

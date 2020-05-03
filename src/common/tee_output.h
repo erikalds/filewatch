@@ -7,7 +7,8 @@
 
 namespace logging
 {
-  namespace detail {
+  namespace detail
+  {
     class CapturingRdbuf;
     class FileOutput;
   }  // namespace detail
@@ -25,6 +26,6 @@ namespace logging
     std::list<std::unique_ptr<detail::CapturingRdbuf>> rdbufs;
   };
 
-} // namespace logging
+}  // namespace logging
 
 #endif /* TEE_OUTPUT_H */

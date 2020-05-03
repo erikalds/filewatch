@@ -2,13 +2,13 @@
 #define DEFAULTFILESYSTEM_H
 
 #include "daemon/filesystem.h"
+
 #include <filesystem>
 
 namespace fw
 {
   namespace dm
   {
-
     class DefaultFileSystem : public FileSystem
     {
     public:

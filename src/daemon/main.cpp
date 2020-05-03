@@ -24,16 +24,15 @@
    NORWAY
 */
 
-#include "server.h"
+#include "common/tee_output.h"
 #include "defaultfilesystem.h"
 #include "filesystemwatcherfactory.h"
-#include "common/tee_output.h"
+#include "server.h"
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-
 #include <docopt/docopt.h>
 
+#include <catch2/catch.hpp>
 #include <spdlog/spdlog.h>
 
 #include <vector>
@@ -59,11 +58,11 @@ std::vector<const char*> filter_args(int argc, const char** argv);
 
 int main(int argc, const char* argv[])
 {
-  std::map<std::string, docopt::value> args
-    = docopt::docopt(USAGE,
-                     { std::next(argv), std::next(argv, argc) },
-                     true,  // show help if requested
-                     "fwdaemon 0.1");  // version string
+  std::map<std::string, docopt::value> args =
+    docopt::docopt(USAGE,
+                   {std::next(argv), std::next(argv, argc)},
+                   true,  // show help if requested
+                   "fwdaemon 0.1");  // version string
 
   if (args["--run-unit-tests"].asBool() == true)
   {
@@ -74,8 +73,8 @@ int main(int argc, const char* argv[])
 
     Catch::Session session;
     std::vector<const char*> rawargs = filter_args(argc, argv);
-    auto return_code = session.applyCommandLine(static_cast<int>(rawargs.size()),
-                                                &rawargs[0]);
+    auto return_code =
+      session.applyCommandLine(static_cast<int>(rawargs.size()), &rawargs[0]);
     if (return_code != 0)
       return return_code;
 
@@ -84,7 +83,8 @@ int main(int argc, const char* argv[])
 
   spdlog::info("filewatch 0.1 daemon monitoring {}", args["DIR"].asString());
   auto fs = std::make_unique<fw::dm::DefaultFileSystem>(args["DIR"].asString());
-  auto factory = std::make_unique<fw::dm::FileSystemWatcherFactory>(std::move(fs));
+  auto factory =
+    std::make_unique<fw::dm::FileSystemWatcherFactory>(std::move(fs));
 
   fw::dm::Server server(std::move(factory));
   return server.run();
