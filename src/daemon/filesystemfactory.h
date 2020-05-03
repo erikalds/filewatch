@@ -8,7 +8,6 @@ namespace fw
 {
   namespace dm
   {
-
     class DirectoryView;
 
 

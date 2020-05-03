@@ -12,7 +12,6 @@ namespace fw
   {
     namespace fs
     {
-
       struct DirectoryEntry
       {
         std::string name;  // name of entry in contained directory
@@ -28,7 +27,8 @@ namespace fw
     public:
       virtual ~FileSystem() = 0;
 
-      virtual std::deque<fs::DirectoryEntry> ls(std::string_view dirname) const = 0;
+      virtual std::deque<fs::DirectoryEntry>
+      ls(std::string_view dirname) const = 0;
 
       virtual std::optional<fs::DirectoryEntry>
       get_direntry(std::string_view entryname) const = 0;
@@ -38,7 +38,9 @@ namespace fw
 
       virtual std::string join(std::string_view containing_dir,
                                std::string_view filename) const final
-      { return no_slash_at_end(containing_dir) + "/" + std::string(filename); }
+      {
+        return no_slash_at_end(containing_dir) + "/" + std::string(filename);
+      }
 
       virtual std::string parent(std::string_view entryname) const final
       {
@@ -67,7 +69,11 @@ namespace fw
 
     protected:
       std::string no_slash_at_end(std::string_view entry) const
-      { return std::string(entry.substr(0, entry.back() == '/' ? entry.size() - 1 : entry.size())); }
+      {
+        return std::string(
+          entry.substr(0,
+                       entry.back() == '/' ? entry.size() - 1 : entry.size()));
+      }
     };
 
   }  // namespace dm

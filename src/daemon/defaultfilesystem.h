@@ -2,13 +2,13 @@
 #define DEFAULTFILESYSTEM_H
 
 #include "daemon/filesystem.h"
+
 #include <filesystem>
 
 namespace fw
 {
   namespace dm
   {
-
     class DefaultFileSystem : public FileSystem
     {
     public:
@@ -24,7 +24,7 @@ namespace fw
       bool isdir(std::string_view dirname) const override;
 
     private:
-      fs::DirectoryEntry create_direntry(const std::filesystem::path& p) const;
+      static fs::DirectoryEntry create_direntry(const std::filesystem::path& p);
 
       std::filesystem::path rootdir;
     };

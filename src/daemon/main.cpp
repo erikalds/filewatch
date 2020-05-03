@@ -24,63 +24,107 @@
    NORWAY
 */
 
-#include "server.h"
+#include "common/tee_output.h"
 #include "defaultfilesystem.h"
 #include "filesystemwatcherfactory.h"
-#include "common/tee_output.h"
+#include "server.h"
 
 #define CATCH_CONFIG_RUNNER
-#include <catch.hpp>
+#include <catch2/catch.hpp>
+#include <docopt/docopt.h>
+#include <spdlog/spdlog.h>
 
 #include <vector>
 
+static constexpr auto USAGE =
+  R"(filewatch daemon.
+
+Usage:
+    fwdaemon DIR
+    fwdaemon --run-unit-tests [--tee-output=FILE] [--use-colour=(auto|yes|no)]
+    fwdaemon (-h | --help)
+    fwdaemon --version
+
+Options:
+    --run-unit-tests            Run the unit tests.
+    --tee-output=FILE           Put test output in FILE as well as stderr/stdout.
+    --use-colour=(auto|yes|no)  Use colour in output.
+    -h --help                   Show this screen.
+    --version                   Show version.
+)";
+
+std::vector<const char*> filter_args(int argc, const char** argv);
+
 int main(int argc, const char* argv[])
 {
-  auto run_unit_tests = false;
-  std::vector<const char*> args(argv, argv + argc);
-  std::string tee_output_file;
-  for (auto iter = args.begin(); iter != args.end();)
+  std::map<std::string, docopt::value> args =
+    docopt::docopt(USAGE,
+                   {std::next(argv), std::next(argv, argc)},
+                   true,  // show help if requested
+                   "fwdaemon 0.1");  // version string
+
+  try
+  {
+    if (args["--run-unit-tests"].asBool())
+    {
+      std::unique_ptr<logging::TeeOutput> tee;
+      auto tee_output = args["--tee-output"];
+      if (tee_output)
+      {
+        tee = std::make_unique<logging::TeeOutput>(tee_output.asString());
+      }
+
+      Catch::Session session;
+      std::vector<const char*> rawargs = filter_args(argc, argv);
+      auto return_code =
+        session.applyCommandLine(static_cast<int>(rawargs.size()), &rawargs[0]);
+      if (return_code != 0)
+      {
+        return return_code;
+      }
+
+      return session.run();
+    }
+
+    spdlog::info("filewatch 0.1 daemon monitoring {}", args["DIR"].asString());
+    auto fs =
+      std::make_unique<fw::dm::DefaultFileSystem>(args["DIR"].asString());
+    auto factory =
+      std::make_unique<fw::dm::FileSystemWatcherFactory>(std::move(fs));
+
+    fw::dm::Server server(std::move(factory));
+    return server.run();
+  }
+  catch (const std::exception& e)
+  {
+    spdlog::error("Exception caught in main: {}", e.what());
+  }
+  catch (...)
+  {
+    spdlog::error("Unknown exception caught in main.");
+  }
+  return -1;
+}
+
+
+std::vector<const char*> filter_args(int argc, const char** argv)
+{
+  std::vector<const char*> rawargs{argv, std::next(argv, argc)};
+  for (auto iter = rawargs.begin(); iter != rawargs.end();)
   {
     if (std::string_view(*iter) == "--run-unit-tests")
     {
-      iter = args.erase(iter);
-      run_unit_tests = true;
+      iter = rawargs.erase(iter);
     }
     else if (std::string_view(*iter) == "--tee-output")
     {
-      iter = args.erase(iter);
-      tee_output_file = *iter;
-      iter = args.erase(iter);
+      iter = rawargs.erase(iter);
+      iter = rawargs.erase(iter);
     }
     else
     {
       ++iter;
     }
   }
-
-  if (run_unit_tests)
-  {
-    std::unique_ptr<logging::TeeOutput> tee;
-    if (!tee_output_file.empty())
-      tee = std::make_unique<logging::TeeOutput>(tee_output_file);
-
-    Catch::Session session;
-    auto return_code = session.applyCommandLine(args.size(), &args[0]);
-    if (return_code != 0)
-      return return_code;
-
-    return session.run();
-  }
-
-  if (args.size() < 2)
-  {
-    std::cerr << "usage: " << args[0] << " <root-dir-to-watch>\n";
-    return -1;
-  }
-
-  auto fs = std::make_unique<fw::dm::DefaultFileSystem>(args[1]);
-  auto factory = std::make_unique<fw::dm::FileSystemWatcherFactory>(std::move(fs));
-
-  fw::dm::Server server(std::move(factory));
-  return server.run();
+  return rawargs;
 }

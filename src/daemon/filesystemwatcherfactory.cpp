@@ -3,14 +3,13 @@
 #include "daemon/directorywatcher.h"
 #include "daemon/filesystem.h"
 
-fw::dm::FileSystemWatcherFactory::FileSystemWatcherFactory(std::unique_ptr<FileSystem> fs) :
-  fs(std::move(fs))
+fw::dm::FileSystemWatcherFactory::FileSystemWatcherFactory(
+  std::unique_ptr<FileSystem> fs_) :
+  fs(std::move(fs_))
 {
 }
 
-fw::dm::FileSystemWatcherFactory::~FileSystemWatcherFactory()
-{
-}
+fw::dm::FileSystemWatcherFactory::~FileSystemWatcherFactory() = default;
 
 std::unique_ptr<fw::dm::DirectoryView>
 fw::dm::FileSystemWatcherFactory::create_directory(std::string_view dirname)

@@ -28,155 +28,154 @@
 
 #include "directoryview.h"
 #include "filesystemfactory.h"
-
 #include "filewatch.grpc.pb.h"
 
+#include <grpc++/security/server_credentials.h>
 #include <grpc++/server.h>
 #include <grpc++/server_builder.h>
-#include <grpc++/security/server_credentials.h>
+#include <spdlog/spdlog.h>
+
 #include <csignal>
 #include <filesystem>
-#include <iostream>
 
-namespace fw
+namespace fw::dm
 {
-  namespace dm
+  namespace
   {
-
-    namespace
-    {
-
-      class FWService : public filewatch::FileWatch::Service
-      {
-      public:
-        ::grpc::Status GetStatus(::grpc::ServerContext* context,
-                                 const ::filewatch::Void* request,
-                                 ::filewatch::FileWatchStatus* response) override
-        {
-          response->set_status(filewatch::FileWatchStatus::OK);
-          response->set_msg("up-and-running");
-          return grpc::Status::OK;
-        }
-
-        ::grpc::Status GetVersion(::grpc::ServerContext* context,
-                                  const ::filewatch::Void* request,
-                                  ::filewatch::Version* response) override
-        {
-          response->set_major(1);
-          response->set_minor(0);
-          response->set_revision(0);
-          return grpc::Status::OK;
-        }
-
-      };
-
-
-      class DirService : public filewatch::Directory::Service
-      {
-      public:
-        explicit DirService(FileSystemFactory& factory) :
-          factory(factory) {}
-
-        ::grpc::Status ListFiles(::grpc::ServerContext* /*context*/,
-                                 const ::filewatch::Directoryname* request,
-                                 ::filewatch::FileList* response) override
-        {
-          auto dirview = factory.create_directory(request->name());
-          return dirview->fill_file_list(*response);
-        }
-
-        ::grpc::Status
-        ListDirectories(::grpc::ServerContext* /*context*/,
-                        const ::filewatch::Directoryname* request,
-                        ::filewatch::DirList* response) override
-        {
-          auto dirview = factory.create_directory(request->name());
-          return dirview->fill_dir_list(*response);
-        }
-
-        FileSystemFactory& factory;
-      };
-
-      class FileService : public filewatch::File::Service
-      {
-      public:
-        ::grpc::Status GetContents(::grpc::ServerContext* context,
-                                   const ::filewatch::Filename* request,
-                                   ::filewatch::FileContent* response) override
-        {
-          return grpc::Status::OK;
-        }
-      };
-
-    }  // anonymous namespace
-
-
-    class Services
+    class FWService : public filewatch::FileWatch::Service
     {
     public:
-      explicit Services(std::unique_ptr<FileSystemFactory> factory_) :
-        factory(std::move(factory_)),
-        Directory(*factory)
-      {}
-
-      void register_services(grpc::ServerBuilder& builder)
+      ::grpc::Status GetStatus(::grpc::ServerContext* /*context*/,
+                               const ::filewatch::Void* /*request*/,
+                               ::filewatch::FileWatchStatus* response) override
       {
-        builder.RegisterService(&File);
-        builder.RegisterService(&FileWatch);
-        builder.RegisterService(&Directory);
+        response->set_status(filewatch::FileWatchStatus::OK);
+        response->set_msg("up-and-running");
+        return grpc::Status::OK;
       }
 
-    private:
-      std::unique_ptr<FileSystemFactory> factory;
-      FWService FileWatch;
-      DirService Directory;
-      FileService File;
+      ::grpc::Status GetVersion(::grpc::ServerContext* /*context*/,
+                                const ::filewatch::Void* /*request*/,
+                                ::filewatch::Version* response) override
+      {
+        response->set_major(1);
+        response->set_minor(0);
+        response->set_revision(0);
+        return grpc::Status::OK;
+      }
     };
 
 
-    static Server* g_server = nullptr;
-
-    void signal_handler(int sig)
+    class DirService : public filewatch::Directory::Service
     {
-      if (g_server == nullptr)
-        return;
+    public:
+      explicit DirService(FileSystemFactory& factory_) : factory(factory_) {}
 
-      if (SIGTERM == sig || SIGINT == sig)
-        g_server->stop();
+      ::grpc::Status ListFiles(::grpc::ServerContext* /*context*/,
+                               const ::filewatch::Directoryname* request,
+                               ::filewatch::FileList* response) override
+      {
+        auto dirview = factory.create_directory(request->name());
+        return dirview->fill_file_list(*response);
+      }
+
+      ::grpc::Status ListDirectories(::grpc::ServerContext* /*context*/,
+                                     const ::filewatch::Directoryname* request,
+                                     ::filewatch::DirList* response) override
+      {
+        auto dirview = factory.create_directory(request->name());
+        return dirview->fill_dir_list(*response);
+      }
+
+    private:
+      FileSystemFactory& factory;
+    };
+
+    class FileService : public filewatch::File::Service
+    {
+    public:
+      ::grpc::Status
+      GetContents(::grpc::ServerContext* /*context*/,
+                  const ::filewatch::Filename* /*request*/,
+                  ::filewatch::FileContent* /*response*/) override
+      {
+        return grpc::Status::OK;
+      }
+    };
+
+  }  // anonymous namespace
+
+
+  class Services
+  {
+  public:
+    explicit Services(std::unique_ptr<FileSystemFactory> factory_) :
+      factory(std::move(factory_)), Directory(*factory)
+    {
     }
 
-
-    Server::Server(std::unique_ptr<FileSystemFactory> factory) :
-      services(std::make_unique<Services>(std::move(factory)))
+    void register_services(grpc::ServerBuilder& builder)
     {
-      g_server = this;
-      std::signal(SIGTERM, signal_handler);
-      std::signal(SIGINT, signal_handler);
+      builder.RegisterService(&File);
+      builder.RegisterService(&FileWatch);
+      builder.RegisterService(&Directory);
     }
 
-    Server::~Server()
+  private:
+    std::unique_ptr<FileSystemFactory> factory;
+    FWService FileWatch;
+    DirService Directory;
+    FileService File;
+  };
+
+
+  static Server* g_server = nullptr;
+
+  void signal_handler(int sig)
+  {
+    if (g_server == nullptr)
     {
-      std::signal(SIGTERM, SIG_DFL);
-      std::signal(SIGINT, SIG_DFL);
-      g_server = nullptr;
+      return;
     }
 
-    int Server::run()
+    if (SIGTERM == sig || SIGINT == sig)
     {
-      grpc::ServerBuilder builder;
-      builder.AddListeningPort("localhost:45678",
-                               grpc::InsecureServerCredentials());
-      services->register_services(builder);
-      server = builder.BuildAndStart();
-      server->Wait();
-      return 0;
+      g_server->stop();
     }
+  }
 
-    void Server::stop()
-    {
-      std::cout << "Terminating filewatch daemon" << std::endl;
-      server->Shutdown();
-    }
 
-  }  // dm
-}  // fw
+  Server::Server(std::unique_ptr<FileSystemFactory> factory) :
+    services(std::make_unique<Services>(std::move(factory)))
+  {
+    g_server = this;
+    std::signal(SIGTERM, signal_handler);
+    std::signal(SIGINT, signal_handler);
+  }
+
+  Server::~Server()
+  {
+    std::signal(SIGTERM, SIG_DFL);
+    std::signal(SIGINT, SIG_DFL);
+    g_server = nullptr;
+  }
+
+  int Server::run()
+  {
+    grpc::ServerBuilder builder;
+    builder.AddListeningPort("localhost:45678",
+                             grpc::InsecureServerCredentials());
+    services->register_services(builder);
+    server = builder.BuildAndStart();
+    spdlog::info("server listening at localhost:45678");
+    server->Wait();
+    return 0;
+  }
+
+  void Server::stop()
+  {
+    spdlog::info("filewatch server daemon terminating");
+    server->Shutdown();
+  }
+
+}  // namespace fw::dm

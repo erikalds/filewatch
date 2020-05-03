@@ -1,5 +1,3 @@
 #include "directoryview.h"
 
-fw::dm::DirectoryView::~DirectoryView()
-{
-}
+fw::dm::DirectoryView::~DirectoryView() = default;

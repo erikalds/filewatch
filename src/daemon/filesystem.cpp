@@ -1,5 +1,3 @@
 #include "filesystem.h"
 
-fw::dm::FileSystem::~FileSystem()
-{
-}
+fw::dm::FileSystem::~FileSystem() = default;

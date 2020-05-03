@@ -29,13 +29,16 @@ target_include_directories(fwdaemon PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/../rpc_defs/rpcgen
   ${CMAKE_CURRENT_SOURCE_DIR}/..
   )
-target_link_libraries(fwdaemon
+target_link_libraries(fwdaemon PRIVATE project_warnings project_options
   filewatch_rpc
   common
   pthread
   stdc++fs
+  CONAN_PKG::catch2
+  CONAN_PKG::docopt.cpp
+  CONAN_PKG::spdlog
+  CONAN_PKG::fmt
   )
-target_compile_features(fwdaemon PUBLIC cxx_std_17)
 
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"
   COMMAND "$<TARGET_FILE:fwdaemon>" --run-unit-tests --use-colour no --tee-output "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"

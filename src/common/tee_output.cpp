@@ -6,21 +6,25 @@
 
 namespace logging
 {
-
-  namespace detail {
-
+  namespace detail
+  {
     class FileOutput
     {
     public:
-      FileOutput(const std::string_view& filename) :
+      explicit FileOutput(const std::string_view& filename) :
         out_stream(filename.data())
       {
         if (!out_stream)
-          throw std::runtime_error("Unable to open file: " + std::string(filename));
+        {
+          throw std::runtime_error("Unable to open file: "
+                                   + std::string(filename));
+        }
       }
 
       void put(std::basic_streambuf<char>::int_type ch)
-      { out_stream.rdbuf()->sputc(ch); }
+      {
+        out_stream.rdbuf()->sputc(static_cast<char>(ch));
+      }
 
     private:
       std::ofstream out_stream;
@@ -29,20 +33,20 @@ namespace logging
     class CapturingRdbuf : public std::basic_streambuf<char>
     {
     public:
-      CapturingRdbuf(FileOutput& output, std::ostream& stream) :
-        output(output),
-        stream(stream)
+      CapturingRdbuf(FileOutput& output_, std::ostream& stream_) :
+        output(output_), stream(stream_)
       {
         orig_rdbuf = stream.rdbuf(this);
       }
-      ~CapturingRdbuf()
-      {
-        stream.rdbuf(orig_rdbuf);
-      }
+      CapturingRdbuf(const CapturingRdbuf&) = delete;
+      CapturingRdbuf& operator=(const CapturingRdbuf&) = delete;
+      CapturingRdbuf(CapturingRdbuf&&) = default;
+      CapturingRdbuf& operator=(CapturingRdbuf&&) = delete;
+      ~CapturingRdbuf() override { stream.rdbuf(orig_rdbuf); }
 
       std::basic_streambuf<char>::int_type overflow(int_type ch) override
       {
-        orig_rdbuf->sputc(ch);
+        orig_rdbuf->sputc(static_cast<char>(ch));
         output.put(ch);
         return 0;
       }
@@ -56,19 +60,16 @@ namespace logging
   }  // namespace detail
 
   TeeOutput::TeeOutput(std::string_view filename) :
-    file_output(std::make_unique<detail::FileOutput>(filename)),
-    rdbufs()
+    file_output(std::make_unique<detail::FileOutput>(filename))
   {
-    rdbufs.push_back(std::make_unique<detail::CapturingRdbuf>(*file_output,
-                                                              std::cout));
-    rdbufs.push_back(std::make_unique<detail::CapturingRdbuf>(*file_output,
-                                                              std::cerr));
-    rdbufs.push_back(std::make_unique<detail::CapturingRdbuf>(*file_output,
-                                                              std::clog));
+    rdbufs.push_back(
+      std::make_unique<detail::CapturingRdbuf>(*file_output, std::cout));
+    rdbufs.push_back(
+      std::make_unique<detail::CapturingRdbuf>(*file_output, std::cerr));
+    rdbufs.push_back(
+      std::make_unique<detail::CapturingRdbuf>(*file_output, std::clog));
   }
 
-  TeeOutput::~TeeOutput()
-  {
-  }
+  TeeOutput::~TeeOutput() = default;
 
-} // namespace logging
+}  // namespace logging

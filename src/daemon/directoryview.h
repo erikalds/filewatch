@@ -1,25 +1,30 @@
 #ifndef DIRECTORYVIEW_H
 #define DIRECTORYVIEW_H
 
-namespace filewatch {
+namespace filewatch
+{
   class DirList;
   class FileList;
 }  // namespace filewatch
 
-namespace grpc { class Status; }
+namespace grpc
+{
+  class Status;
+}
 
 namespace fw
 {
   namespace dm
   {
-
     class DirectoryView
     {
     public:
       virtual ~DirectoryView() = 0;
 
-      virtual grpc::Status fill_dir_list(filewatch::DirList& response) const = 0;
-      virtual grpc::Status fill_file_list(filewatch::FileList& response) const = 0;
+      virtual grpc::Status
+      fill_dir_list(filewatch::DirList& response) const = 0;
+      virtual grpc::Status
+      fill_file_list(filewatch::FileList& response) const = 0;
     };
 
   }  // namespace dm
