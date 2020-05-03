@@ -24,7 +24,7 @@ namespace fw
       bool isdir(std::string_view dirname) const override;
 
     private:
-      fs::DirectoryEntry create_direntry(const std::filesystem::path& p) const;
+      static fs::DirectoryEntry create_direntry(const std::filesystem::path& p);
 
       std::filesystem::path rootdir;
     };

@@ -60,24 +60,30 @@ fw::dm::DirectoryWatcher::fill_file_list(filewatch::FileList& response) const
 template<typename ResponseListT, typename AddEntryFunctionT>
 grpc::Status
 fw::dm::DirectoryWatcher::fill_entry_list(ResponseListT& response,
-                                          FilterFunction filter,
+                                          const FilterFunction& filter,
                                           AddEntryFunctionT add_entry) const
 {
   response.mutable_name()->set_name(dirname);
 
   if (!fs.exists(dirname))
+  {
     return grpc::Status(grpc::NOT_FOUND, "'" + dirname + "' does not exist");
+  }
 
   if (!fs.isdir(dirname))
+  {
     return grpc::Status(grpc::NOT_FOUND,
                         "'" + dirname + "' is not a directory");
+  }
 
   set_mtime_of(*response.mutable_name(), *fs.get_direntry(dirname));
 
-  for (auto direntry : fs.ls(dirname))
+  for (const auto& direntry : fs.ls(dirname))
   {
     if (filter(direntry))
+    {
       continue;
+    }
 
     add_entry(response, direntry);
   }

@@ -12,7 +12,9 @@ fw::dm::DefaultFileSystem::ls(std::string_view dirname) const
   auto dir = join(rootdir.string(), dirname);
   std::deque<fw::dm::fs::DirectoryEntry> entries;
   for (auto& p : std::filesystem::directory_iterator(dir))
+  {
     entries.push_back(create_direntry(p.path()));
+  }
 
   return entries;
 }
@@ -22,7 +24,9 @@ fw::dm::DefaultFileSystem::get_direntry(std::string_view entryname) const
 {
   auto name = join(rootdir.string(), entryname);
   if (!std::filesystem::exists(name))
+  {
     return std::optional<fw::dm::fs::DirectoryEntry>{};
+  }
 
   return create_direntry(name);
 }
@@ -38,7 +42,7 @@ bool fw::dm::DefaultFileSystem::isdir(std::string_view dirname) const
 }
 
 fw::dm::fs::DirectoryEntry
-fw::dm::DefaultFileSystem::create_direntry(const std::filesystem::path& p) const
+fw::dm::DefaultFileSystem::create_direntry(const std::filesystem::path& p)
 {
   fw::dm::fs::DirectoryEntry dirent;
   dirent.name = p.filename().string();

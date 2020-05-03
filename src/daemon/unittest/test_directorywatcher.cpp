@@ -127,7 +127,7 @@ TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
   SECTION("empty root dir")
   {
     CHECK(dw.fill_file_list(response).ok());
-    CHECK(response.filenames().size() == 0);
+    CHECK(response.filenames().empty());
   }
 
   SECTION("one file in root dir")

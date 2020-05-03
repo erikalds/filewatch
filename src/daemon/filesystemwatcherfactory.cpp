@@ -9,7 +9,7 @@ fw::dm::FileSystemWatcherFactory::FileSystemWatcherFactory(
 {
 }
 
-fw::dm::FileSystemWatcherFactory::~FileSystemWatcherFactory() {}
+fw::dm::FileSystemWatcherFactory::~FileSystemWatcherFactory() = default;
 
 std::unique_ptr<fw::dm::DirectoryView>
 fw::dm::FileSystemWatcherFactory::create_directory(std::string_view dirname)

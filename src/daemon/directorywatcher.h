@@ -32,7 +32,7 @@ namespace fw
 
       template<typename ResponseListT, typename AddEntryFunctionT>
       grpc::Status fill_entry_list(ResponseListT& response,
-                                   FilterFunction filter,
+                                   const FilterFunction& filter,
                                    AddEntryFunctionT add_entry) const;
 
       std::string dirname;

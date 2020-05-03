@@ -7,6 +7,9 @@ endif()
 find_package(Protobuf REQUIRED)
 find_package(GRPC REQUIRED)
 
+# disable clang tidy for this directory, containing only generated code
+set(CMAKE_CXX_CLANG_TIDY "")
+
 set(PROTOS
   ${CMAKE_CURRENT_SOURCE_DIR}/filewatch.proto
   )

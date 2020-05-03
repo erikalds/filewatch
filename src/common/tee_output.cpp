@@ -11,11 +11,14 @@ namespace logging
     class FileOutput
     {
     public:
-      FileOutput(const std::string_view& filename) : out_stream(filename.data())
+      explicit FileOutput(const std::string_view& filename) :
+        out_stream(filename.data())
       {
         if (!out_stream)
+        {
           throw std::runtime_error("Unable to open file: "
                                    + std::string(filename));
+        }
       }
 
       void put(std::basic_streambuf<char>::int_type ch)
@@ -35,7 +38,11 @@ namespace logging
       {
         orig_rdbuf = stream.rdbuf(this);
       }
-      ~CapturingRdbuf() { stream.rdbuf(orig_rdbuf); }
+      CapturingRdbuf(const CapturingRdbuf&) = delete;
+      CapturingRdbuf& operator=(const CapturingRdbuf&) = delete;
+      CapturingRdbuf(CapturingRdbuf&&) = default;
+      CapturingRdbuf& operator=(CapturingRdbuf&&) = delete;
+      ~CapturingRdbuf() override { stream.rdbuf(orig_rdbuf); }
 
       std::basic_streambuf<char>::int_type overflow(int_type ch) override
       {
@@ -53,7 +60,7 @@ namespace logging
   }  // namespace detail
 
   TeeOutput::TeeOutput(std::string_view filename) :
-    file_output(std::make_unique<detail::FileOutput>(filename)), rdbufs()
+    file_output(std::make_unique<detail::FileOutput>(filename))
   {
     rdbufs.push_back(
       std::make_unique<detail::CapturingRdbuf>(*file_output, std::cout));
@@ -63,6 +70,6 @@ namespace logging
       std::make_unique<detail::CapturingRdbuf>(*file_output, std::clog));
   }
 
-  TeeOutput::~TeeOutput() {}
+  TeeOutput::~TeeOutput() = default;
 
 }  // namespace logging

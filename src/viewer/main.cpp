@@ -26,9 +26,9 @@
 #include "common/tee_output.h"
 
 #define CATCH_CONFIG_RUNNER
-#include <docopt/docopt.h>
-
 #include <catch2/catch.hpp>
+#include <docopt/docopt.h>
+#include <spdlog/spdlog.h>
 
 #include <vector>
 
@@ -59,31 +59,46 @@ int main(int argc, const char* argv[])
                    {std::next(argv), std::next(argv, argc)},
                    true,  // show help if requested
                    "filewatch 0.1");  // version string
-
-  if (args["--run-unit-tests"].asBool() == true)
+  try
   {
-    std::unique_ptr<logging::TeeOutput> tee;
-    auto tee_output = args["--tee-output"];
-    if (tee_output)
-      tee = std::make_unique<logging::TeeOutput>(tee_output.asString());
+    if (args["--run-unit-tests"].asBool())
+    {
+      std::unique_ptr<logging::TeeOutput> tee;
+      auto tee_output = args["--tee-output"];
+      if (tee_output)
+      {
+        tee = std::make_unique<logging::TeeOutput>(tee_output.asString());
+      }
 
-    Catch::Session session;
-    std::vector<const char*> rawargs = filter_args(argc, argv);
-    auto return_code =
-      session.applyCommandLine(static_cast<int>(rawargs.size()), &rawargs[0]);
-    if (return_code != 0)
-      return return_code;
+      Catch::Session session;
+      std::vector<const char*> rawargs = filter_args(argc, argv);
+      auto return_code =
+        session.applyCommandLine(static_cast<int>(rawargs.size()), &rawargs[0]);
+      if (return_code != 0)
+      {
+        return return_code;
+      }
 
-    return session.run();
+      return session.run();
+    }
+
+    return 0;
   }
-
-  return 0;
+  catch (const std::exception& e)
+  {
+    spdlog::error("Exception caught in main: {}", e.what());
+  }
+  catch (...)
+  {
+    spdlog::error("Unknown exception caught in main.");
+  }
+  return -1;
 }
 
 
 std::vector<const char*> filter_args(int argc, const char** argv)
 {
-  std::vector<const char*> rawargs(argv, argv + argc);
+  std::vector<const char*> rawargs{argv, std::next(argv, argc)};
   for (auto iter = rawargs.begin(); iter != rawargs.end();)
   {
     if (std::string_view(*iter) == "--run-unit-tests")
