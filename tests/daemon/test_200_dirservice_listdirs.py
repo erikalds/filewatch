@@ -61,7 +61,6 @@ class TestCase(unittest.TestCase):
         self.assertEquals(set(["dir3", "dir4", "dir5"]),
                           set([dname.name for dname in dirlist.dirnames]))
 
-    @unittest.skip("fails, fix laster")
     def test_modification_times(self):
         global fs
         dirs = ["dir1", "dir2", os.path.join("dir1", "dir3"),

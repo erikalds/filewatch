@@ -26,6 +26,7 @@
 
 #include "server.h"
 
+#include "directoryeventlistener.h"
 #include "directoryview.h"
 #include "filesystemfactory.h"
 #include "filewatch.grpc.pb.h"
@@ -37,6 +38,7 @@
 
 #include <csignal>
 #include <filesystem>
+#include <thread>
 
 namespace fw::dm
 {
@@ -66,6 +68,33 @@ namespace fw::dm
     };
 
 
+    class MyDirEventListener : public fw::dm::DirectoryEventListener
+    {
+    public:
+      explicit MyDirEventListener(
+        ::grpc::ServerWriter<::filewatch::DirectoryEvent>* writer_) :
+        writer(writer_)
+      {
+      }
+
+      void notify(filewatch::DirectoryEvent::Event /*event*/,
+                  std::string_view /*containing_dir*/,
+                  std::string_view /*dir_name*/,
+                  uint64_t mtime) override
+      {
+        filewatch::DirectoryEvent direvt;
+        direvt.set_event(filewatch::DirectoryEvent::DIRECTORY_ADDED);
+        direvt.set_name("/dir");
+        direvt.mutable_modification_time()->set_epoch(mtime);
+        direvt.mutable_dirname()->set_name("subdir");
+        direvt.mutable_dirname()->mutable_modification_time()->set_epoch(mtime);
+        writer->Write(direvt);
+      }
+
+    private:
+      ::grpc::ServerWriter<::filewatch::DirectoryEvent>* writer;
+    };
+
     class DirService : public filewatch::Directory::Service
     {
     public:
@@ -85,6 +114,28 @@ namespace fw::dm
       {
         auto dirview = factory.create_directory(request->name());
         return dirview->fill_dir_list(*response);
+      }
+
+      ::grpc::Status ListenForEvents(
+        ::grpc::ServerContext* context,
+        const ::filewatch::Directoryname* request,
+        ::grpc::ServerWriter<::filewatch::DirectoryEvent>* writer) override
+      {
+        auto dirview = factory.create_directory(request->name());
+        MyDirEventListener listener(writer);
+        dirview->register_event_listener(listener);
+        while (!context->IsCancelled())
+        {
+          std::this_thread::yield();
+          // filewatch::DirectoryEvent direvt;
+          // direvt.set_event(filewatch::DirectoryEvent::DIRECTORY_ADDED);
+          // direvt.set_name("/dir");
+          // direvt.mutable_dirname()->set_name("subdir");
+          // direvt.mutable_dirname()->mutable_modification_time()->set_epoch(0);
+          // writer->Write(direvt);
+        }
+        dirview->unregister_event_listener(listener);
+        return grpc::Status::OK;
       }
 
     private:

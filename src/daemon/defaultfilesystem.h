@@ -12,7 +12,7 @@ namespace fw
     class DefaultFileSystem : public FileSystem
     {
     public:
-      explicit DefaultFileSystem(std::string_view rootdir);
+      explicit DefaultFileSystem(std::string_view rootdir_);
 
       std::deque<fs::DirectoryEntry>
       ls(std::string_view dirname) const override;
@@ -23,10 +23,8 @@ namespace fw
       bool exists(std::string_view filename) const override;
       bool isdir(std::string_view dirname) const override;
 
-    private:
+    protected:
       static fs::DirectoryEntry create_direntry(const std::filesystem::path& p);
-
-      std::filesystem::path rootdir;
     };
 
   }  // namespace dm

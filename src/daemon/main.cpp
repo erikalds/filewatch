@@ -25,7 +25,7 @@
 */
 
 #include "common/tee_output.h"
-#include "defaultfilesystem.h"
+#include "filesystem.h"
 #include "filesystemwatcherfactory.h"
 #include "server.h"
 
@@ -87,8 +87,7 @@ int main(int argc, const char* argv[])
     }
 
     spdlog::info("filewatch 0.1 daemon monitoring {}", args["DIR"].asString());
-    auto fs =
-      std::make_unique<fw::dm::DefaultFileSystem>(args["DIR"].asString());
+    auto fs = fw::dm::create_filesystem(args["DIR"].asString());
     auto factory =
       std::make_unique<fw::dm::FileSystemWatcherFactory>(std::move(fs));
 

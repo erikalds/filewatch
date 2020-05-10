@@ -22,10 +22,12 @@ namespace fw
     class DirectoryWatcher : public DirectoryView
     {
     public:
-      DirectoryWatcher(std::string_view dirname, const FileSystem& fs);
+      DirectoryWatcher(std::string_view dirname, FileSystem& fs);
 
       grpc::Status fill_dir_list(filewatch::DirList& response) const override;
       grpc::Status fill_file_list(filewatch::FileList& response) const override;
+      void register_event_listener(DirectoryEventListener& listener) override;
+      void unregister_event_listener(DirectoryEventListener& listener) override;
 
     private:
       typedef std::function<bool(const fs::DirectoryEntry&)> FilterFunction;
@@ -36,7 +38,7 @@ namespace fw
                                    AddEntryFunctionT add_entry) const;
 
       std::string dirname;
-      const FileSystem& fs;
+      FileSystem& fs;
     };
 
   }  // namespace dm

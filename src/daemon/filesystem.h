@@ -3,6 +3,8 @@
 
 #include <cassert>
 #include <deque>
+#include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -22,6 +24,9 @@ namespace fw
     }  // namespace fs
 
 
+    class DirectoryEventListener;
+
+
     class FileSystem
     {
     public:
@@ -39,7 +44,8 @@ namespace fw
       virtual std::string join(std::string_view containing_dir,
                                std::string_view filename) const final
       {
-        return no_slash_at_end(containing_dir) + "/" + std::string(filename);
+        return no_slash_at_end(containing_dir) + "/"
+               + no_slash_at_beginning(filename);
       }
 
       virtual std::string parent(std::string_view entryname) const final
@@ -67,6 +73,11 @@ namespace fw
         return en.substr(pos + 1);
       }
 
+      virtual void watch(std::string_view dirname,
+                         DirectoryEventListener& listener) = 0;
+      virtual void stop_watching(std::string_view dirname,
+                                 DirectoryEventListener& listener) = 0;
+
     protected:
       std::string no_slash_at_end(std::string_view entry) const
       {
@@ -74,7 +85,20 @@ namespace fw
           entry.substr(0,
                        entry.back() == '/' ? entry.size() - 1 : entry.size()));
       }
+      std::string no_slash_at_beginning(std::string_view entry) const
+      {
+        return std::string(entry.substr(entry.front() == '/' ? 1 : 0));
+      }
+
+      explicit FileSystem(const std::filesystem::path& rootdir_) :
+        rootdir(rootdir_)
+      {
+      }
+
+      std::filesystem::path rootdir;
     };
+
+    std::unique_ptr<FileSystem> create_filesystem(std::string_view rootdir);
 
   }  // namespace dm
 }  // namespace fw

@@ -4,6 +4,7 @@
 #include "daemon/filesystem.h"
 
 #include <catch2/catch.hpp>
+#include <spdlog/spdlog.h>
 
 #include <set>
 
@@ -24,7 +25,10 @@ struct FileNode
 class DummyFileSystem : public fw::dm::FileSystem
 {
 public:
-  DummyFileSystem(uint64_t root_mtime = 12345) : root("/", true, root_mtime) {}
+  DummyFileSystem(std::string_view rootdir_, uint64_t root_mtime = 12345) :
+    fw::dm::FileSystem(rootdir_), root("/", true, root_mtime)
+  {
+  }
 
   FileNode root;
 
@@ -75,14 +79,14 @@ public:
     const FileNode* parent = nullptr;
     while (current != nullptr && !name.empty())
     {
-      auto pos = name.find_first_of('/');
-      if (pos == std::string_view::npos)
-        pos = name.size() - 1;
+      auto pos_next_slash = name.find_first_of('/');
+      if (pos_next_slash == std::string_view::npos)
+        pos_next_slash = name.size();
 
       parent = current;
       current = nullptr;
-      auto curname = name.substr(0, pos + 1);
-      name = name.substr(pos + 1);
+      auto curname = name.substr(0, pos_next_slash);
+      name = name.substr(std::min(pos_next_slash + 1, name.size()));
       auto child = parent->child.get();
       while (child != nullptr)
       {
@@ -164,8 +168,11 @@ public:
   {
     auto node = find_node(entryname);
     if (!node)
+    {
+      spdlog::debug("DFS: Could not find direntry: {}\n", entryname);
       return std::optional<fw::dm::fs::DirectoryEntry>();
-
+    }
+    spdlog::debug("DFS: Found direntry: {}\n", entryname);
     return node->entry;
   }
 
@@ -179,6 +186,26 @@ public:
     auto node = find_node(dirname);
     return node != nullptr && node->entry.is_dir == true;
   }
+
+  void watch(std::string_view dirname,
+             fw::dm::DirectoryEventListener& listener) override
+  {
+    listeners.push_back(std::make_pair(&listener, std::string(dirname)));
+  }
+
+  void stop_watching(std::string_view dirname,
+                     fw::dm::DirectoryEventListener& listener) override
+  {
+    for (auto iter = std::begin(listeners); iter != std::end(listeners); ++iter)
+      if (iter->first == &listener && iter->second == dirname)
+      {
+        listeners.erase(iter);
+        return;
+      }
+  }
+
+  std::vector<std::pair<fw::dm::DirectoryEventListener*, std::string>>
+    listeners;
 };
 
 #endif /* DUMMYFILESYSTEM_H */

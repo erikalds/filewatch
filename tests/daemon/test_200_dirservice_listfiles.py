@@ -67,7 +67,6 @@ class TestCase(unittest.TestCase):
         self.assertEquals(set(["file3.txt", "file4.txt", "file5.txt"]),
                           set([fname.name for fname in filelist.filenames]))
 
-    @unittest.skip("fails, fix laster")
     def test_lists_files_modification_time(self):
         global fs
         files = ["file1.txt", "file2.txt", os.path.join("dir1", "file3.txt"),

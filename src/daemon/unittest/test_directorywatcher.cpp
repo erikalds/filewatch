@@ -1,3 +1,4 @@
+#include "daemon/directoryeventlistener.h"
 #include "daemon/directorywatcher.h"
 #include "dummyfilesystem.h"
 #include "filewatch.pb.h"
@@ -7,7 +8,7 @@
 
 TEST_CASE("fill root dir directory list", "[DirectoryWatcher]")
 {
-  DummyFileSystem fs;
+  DummyFileSystem fs("rootdir");
   fw::dm::DirectoryWatcher dw("/", fs);
   filewatch::DirList response;
 
@@ -39,7 +40,7 @@ TEST_CASE("fill root dir directory list", "[DirectoryWatcher]")
 
 TEST_CASE("fill subdir directory list", "[DirectoryWatcher]")
 {
-  DummyFileSystem fs;
+  DummyFileSystem fs("rootdir");
   fw::dm::DirectoryWatcher dw("/subdir", fs);
   filewatch::DirList response;
 
@@ -84,7 +85,7 @@ TEST_CASE("fill subdir directory list", "[DirectoryWatcher]")
 
 TEST_CASE("fill directory list sets dirname", "[DirectoryWatcher]")
 {
-  DummyFileSystem fs(123456);
+  DummyFileSystem fs("rootdir", 123456);
   fs.add_dir("/", "subdir", 27389272);
   fs.add_file("/subdir", "filename", 17283);
 
@@ -120,7 +121,7 @@ TEST_CASE("fill directory list sets dirname", "[DirectoryWatcher]")
 
 TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
 {
-  DummyFileSystem fs(564321);
+  DummyFileSystem fs("rootdir", 564321);
   filewatch::FileList response;
   fw::dm::DirectoryWatcher dw("/", fs);
 
@@ -158,7 +159,7 @@ TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
 
 TEST_CASE("fill subdir file list", "[DirectoryWatcher]")
 {
-  DummyFileSystem fs;
+  DummyFileSystem fs("rootdir");
   fw::dm::DirectoryWatcher dw("/subdir", fs);
   filewatch::FileList response;
 
@@ -207,7 +208,7 @@ TEST_CASE("fill subdir file list", "[DirectoryWatcher]")
 
 TEST_CASE("fill file list sets dirname", "[DirectoryWatcher]")
 {
-  DummyFileSystem fs(382932123);
+  DummyFileSystem fs("rootdir", 382932123);
   fs.add_dir("/", "subdir", 27389272);
   fs.add_file("/subdir", "filename", 17283);
 
@@ -237,5 +238,70 @@ TEST_CASE("fill file list sets dirname", "[DirectoryWatcher]")
     CHECK("'/subdir/not_existing' does not exist" == status.error_message());
     CHECK("/subdir/not_existing" == response.name().name());
     // CHECK(response.name().modification_time().epoch() == UNDEFINED);
+  }
+}
+
+namespace
+{
+  class DummyDirectoryEventListener : public fw::dm::DirectoryEventListener
+  {
+  public:
+    void notify(filewatch::DirectoryEvent::Event event,
+                std::string_view containing_dir,
+                std::string_view dir_name,
+                uint64_t mtime) override
+    {
+      events.emplace_back(EventStruct{event, containing_dir, dir_name, mtime});
+    }
+
+    struct EventStruct
+    {
+      EventStruct(filewatch::DirectoryEvent::Event e, std::string_view cd,
+                  std::string_view dn, uint64_t m) :
+        event(e),
+        containing_dir(cd), dir_name(dn), mtime(m)
+      {
+      }
+
+      filewatch::DirectoryEvent::Event event;
+      std::string containing_dir;
+      std::string dir_name;
+      uint64_t mtime;
+    };
+
+    std::vector<EventStruct> events;
+  };
+
+}  // anonymous namespace
+
+TEST_CASE("listen for events", "[DirectoryWatcher]")
+{
+  DummyFileSystem fs("rootdir");
+  fs.add_dir("/", "dir", 123454);
+  fs.add_dir("/", "otherdir", 123454);
+  DummyDirectoryEventListener listener;
+
+  SECTION("adds and removes watch")
+  {
+    fw::dm::DirectoryWatcher dw("/dir", fs);
+    dw.register_event_listener(listener);
+    REQUIRE(fs.listeners.size() == 1);
+    CHECK(fs.listeners[0].first == &listener);
+    CHECK(fs.listeners[0].second == "/dir");
+
+    dw.unregister_event_listener(listener);
+    CHECK(fs.listeners.empty());
+  }
+
+  SECTION("adds and removes watch on different directory")
+  {
+    fw::dm::DirectoryWatcher dw("/otherdir", fs);
+    dw.register_event_listener(listener);
+    REQUIRE(fs.listeners.size() == 1);
+    CHECK(fs.listeners[0].first == &listener);
+    CHECK(fs.listeners[0].second == "/otherdir");
+
+    dw.unregister_event_listener(listener);
+    CHECK(fs.listeners.empty());
   }
 }

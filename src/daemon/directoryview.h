@@ -16,6 +16,8 @@ namespace fw
 {
   namespace dm
   {
+    class DirectoryEventListener;
+
     class DirectoryView
     {
     public:
@@ -25,6 +27,11 @@ namespace fw
       fill_dir_list(filewatch::DirList& response) const = 0;
       virtual grpc::Status
       fill_file_list(filewatch::FileList& response) const = 0;
+
+      virtual void
+      register_event_listener(DirectoryEventListener& listener) = 0;
+      virtual void
+      unregister_event_listener(DirectoryEventListener& listener) = 0;
     };
 
   }  // namespace dm

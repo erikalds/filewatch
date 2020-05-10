@@ -6,7 +6,7 @@
 
 TEST_CASE("create_directory", "[filesystemwatcherfactory]")
 {
-  auto fs = std::make_unique<DummyFileSystem>();
+  auto fs = std::make_unique<DummyFileSystem>("rootdir");
   fw::dm::FileSystemWatcherFactory f(std::move(fs));
   fw::dm::FileSystemFactory& factory = f;
   SECTION("creates valid ptr")

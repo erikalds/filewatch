@@ -5,7 +5,9 @@ if(${CMAKE_VERSION} VERSION_LESS 3.12)
 endif()
 
 add_library(common
+  loop_thread.cpp
   tee_output.cpp
+  loop_thread.h
   tee_output.h
   )
 target_link_libraries(common PRIVATE project_warnings project_options)

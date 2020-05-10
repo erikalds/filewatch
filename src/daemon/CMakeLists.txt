@@ -6,23 +6,30 @@ endif()
 
 add_executable(fwdaemon
   defaultfilesystem.cpp
+  directoryeventlistener.cpp
   directoryview.cpp
   directorywatcher.cpp
   filesystem.cpp
   filesystemfactory.cpp
   filesystemwatcherfactory.cpp
+  linuxfilesystem.cpp
   main.cpp
   server.cpp
+  windowsfilesystem.cpp
   unittest/test_directorywatcher.cpp
   unittest/test_filesystem.cpp
   unittest/test_filesystemwatcherfactory.cpp
+  unittest/test_linux_filesystem.cpp
   defaultfilesystem.h
+  directoryeventlistener.h
   directoryview.h
   directorywatcher.h
   filesystem.h
   filesystemfactory.h
   filesystemwatcherfactory.h
+  linuxfilesystem.h
   server.h
+  windowsfilesystem.h
   unittest/dummyfilesystem.h
   )
 target_include_directories(fwdaemon PRIVATE
