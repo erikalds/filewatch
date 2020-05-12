@@ -88,6 +88,7 @@ class RunningProcess:
 
     def __enter__(self):
         self.proc = subprocess.Popen(self.cmd)
+        return self.proc
 
     def __exit__(self, type_, value, traceback):
         optional_exit_code = self.proc.poll()
@@ -141,6 +142,25 @@ class TeeOutput:
         sys.stderr = self._ostreams[1]
 
 
+def simple_start_stop_test(fwdaemon_path, fwdaemon_args):
+    logging.info("Running simple start/stop test...")
+    try:
+        with run_process([fwdaemon_path] + fwdaemon_args) as p:
+            try:
+                p.wait(timeout=1) # should be able to run for 1 second
+                logging.error("%s failed with return code %d within 1 second"
+                              % (fwdaemon_path, p.poll()))
+            except subprocess.TimeoutExpired:
+                pass # expected to time out
+
+        logging.info("Simple start/stop test PASSED")
+        return 0
+    except Exception as e:
+        logging.error("Simple start/stop test FAILED")
+        logging.error(str(e))
+        return 1
+
+
 def handle_args(argv):
     objs = list()
     if '--tee-output' in argv:
@@ -165,6 +185,7 @@ def main(argv):
             fwdaemon_args = [tempdir.path]
             if 'debug' in objs:
                 fwdaemon_args.append('--log-level=debug')
+            failures = simple_start_stop_test(argv[1], fwdaemon_args)
             with run_process([argv[1]] + fwdaemon_args) as p:
                 all_tests = group_tests(argv[2:])
                 keys = list(all_tests.keys())
