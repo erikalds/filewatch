@@ -4,6 +4,7 @@
 #include "dummyfilesystem.h"
 
 #include <catch2/catch.hpp>
+#include <queue>
 
 #ifdef __linux__
 
@@ -86,7 +87,16 @@ namespace
 
     ssize_t syscall_read(int fd, void* buf, size_t count) override
     {
-      if (fd != init_fd)
+      if (fd == 42) // pipe fd
+      {
+        const size_t n = std::min(count, pipe_queue.size());
+        for (size_t i = 0; i < n; ++i)
+        {
+          static_cast<char*>(buf)[i] = pipe_queue.front();
+          pipe_queue.pop();
+        }
+      }
+      else if (fd != init_fd)
       {
         return 0;
       }
@@ -140,6 +150,17 @@ namespace
             }
           }
         }
+        if (fds[i].fd == 42) // pipe fd
+        {
+          if ((fds[i].events & POLLIN) != 0)
+          {
+            if (pipe_queue.size() > 0)
+            {
+              fds[i].revents |= POLLIN;
+              ++fd_count_with_events;
+            }
+          }
+        }
       }
       if (timeout_ms == -1 && fd_count_with_events == 0)
       {
@@ -149,6 +170,24 @@ namespace
       }
 
       return fd_count_with_events;
+    }
+
+    int syscall_pipe(int pipefd[2]) override
+    {
+      pipefd[0] = 42;
+      pipefd[1] = 44;
+      return 0;
+    }
+    ssize_t syscall_write(int fd, const void* buf, size_t count) override
+    {
+      if (fd == 44)
+      {
+        for (size_t i = 0; i < count; ++i)
+          pipe_queue.push(static_cast<const char*>(buf)[i]);
+
+        return static_cast<ssize_t>(count);
+      }
+      return 0;
     }
 
     void file_added(std::string_view containing_dir, std::string_view filename)
@@ -190,6 +229,7 @@ namespace
 
     std::vector<std::pair<void*, size_t>> waiting_events;
     std::size_t event_pos = 0;
+    std::queue<char> pipe_queue;
   };
 
   class DummyLoopThread;

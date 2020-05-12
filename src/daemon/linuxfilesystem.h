@@ -51,24 +51,71 @@ namespace fw
 
         int add_watch(const char* pathname, uint32_t mask)
         {
-          return syscall_inotify_add_watch(inotify_fd, pathname, mask);
+          int rv = syscall_inotify_add_watch(inotify_fd, pathname, mask);
+          // wake up poll thread so that it can poll on the newly added wds
+          char buf = static_cast<char>(1);
+          syscall_write(pipe_fds[1], &buf, 1);
+          return rv;
         }
         int rm_watch(int wd)
         {
-          return syscall_inotify_rm_watch(inotify_fd, wd);
+          int rv = syscall_inotify_rm_watch(inotify_fd, wd);
+          // wake up poll thread so that it can poll on the remaining wds
+          char buf = static_cast<char>(2);
+          syscall_write(pipe_fds[1], &buf, 1);
+          return rv;
         }
         ssize_t read(void* buf, size_t count)
         {
           return syscall_read(inotify_fd, buf, count);
         }
+        void terminate_poll()
+        {
+          char buf = static_cast<char>(0);
+          syscall_write(pipe_fds[1], &buf, 1);
+        }
         int poll(short events, short& revents, int timeout_ms)
         {
-          struct pollfd pfd;
-          pfd.fd = inotify_fd;
-          pfd.events = events;
-          int poll_result = syscall_poll(&pfd, 1, timeout_ms);
-          revents = pfd.revents;
-          return poll_result;
+          struct pollfd pfd[2];
+          pfd[0].fd = inotify_fd;
+          pfd[0].events = events;
+          pfd[1].fd = pipe_fds[0];
+          pfd[1].events = events;
+          short expected_events = events | POLLHUP | POLLERR | POLLNVAL;
+          while (true)
+          {
+            int poll_result = syscall_poll(pfd, 2, timeout_ms);
+            if ((pfd[0].revents & expected_events) != 0
+                || poll_result == -1)
+            {
+              revents = pfd[0].revents;
+              return poll_result;
+            }
+            else if ((pfd[1].revents & expected_events) != 0)
+            {
+              char buf;
+              syscall_read(pipe_fds[0], &buf, 1); // remove written char to pipe
+              if (static_cast<int>(buf) == 0)
+              {
+                spdlog::debug("read termination signal from pipe");
+                errno = EINTR;
+                return -1;
+              }
+              else if (static_cast<int>(buf) == 1)
+              {
+                spdlog::debug("read add signal from pipe - poll again");
+              }
+              else if (static_cast<int>(buf) == 2)
+              {
+                spdlog::debug("read rm signal from pipe - poll again");
+              }
+              else
+              {
+                spdlog::debug("read unknown signal from pipe: {} - poll again",
+                              static_cast<int>(buf));
+              }
+            }
+          }
         }
 
       private:
@@ -81,8 +128,11 @@ namespace fw
         virtual ssize_t syscall_read(int fd, void* buf, size_t count);
         virtual int syscall_poll(struct pollfd* fds, nfds_t nfds,
                                  int timeout_ms);
+        virtual int syscall_pipe(int pipefd[2]);
+        virtual ssize_t syscall_write(int fd, const void* buf, size_t count);
 
         int inotify_fd = -1;
+        int pipe_fds[2];
       };
 
       class Watch
@@ -135,6 +185,7 @@ namespace fw
       std::map<std::string, dtls::Watch> watches;
       std::unique_ptr<threading::LoopThreadFactory> thread_factory;
       std::unique_ptr<threading::LoopThread> watch_thread;
+      std::atomic<int> currently_polling = 0;
     };
 
   }  // namespace dm
@@ -160,13 +211,26 @@ fw::dm::OSFileSystem<SuperClassT>::OSFileSystem(
   inotify = std::move(in_ptr);
   thread_factory = std::move(thr_fac);
 
-  watch_thread = thread_factory->create_thread([&]() { this->poll_watches(); });
+  watch_thread = thread_factory->create_thread([&]() { this->poll_watches(); },
+                                               true /* create_suspended */);
 }
 
 template<typename SuperClassT>
 fw::dm::OSFileSystem<SuperClassT>::~OSFileSystem()
 {
   watches.clear();
+  watch_thread->stop();
+
+  if (watch_thread->is_joinable())
+  {
+    if (currently_polling > 0)
+    {
+      inotify->terminate_poll();
+    }
+    spdlog::debug("watch_thread->join()");
+    watch_thread->join();
+  }
+
   if (inotify->close() == -1)
   {
     auto pre = "close(inotify_fd) failed: ";
@@ -215,7 +279,10 @@ void fw::dm::OSFileSystem<SuperClassT>::watch(std::string_view dirname,
                     dirname, ".", 0);
 
     if (unsuspend_watch_thread)
+    {
       watch_thread->unsuspend();
+      spdlog::debug("unsuspended watch thread");
+    }
   }
   catch (const std::runtime_error& e)
   {
@@ -229,13 +296,20 @@ void fw::dm::OSFileSystem<SuperClassT>::stop_watching(
 {
   auto iter = watches.find(std::string(dirname));
   if (iter == std::end(watches))
+  {
     return;
+  }
 
   if (iter->second.remove_listener(listener))
+  {
     watches.erase(iter);
+  }
 
   if (watches.empty())
+  {
     watch_thread->suspend();
+    spdlog::debug("suspended watch thread");
+  }
 }
 
 namespace
@@ -259,9 +333,37 @@ void fw::dm::OSFileSystem<SuperClassT>::poll_watches()
   auto actualsize = maxstructsize;
   char* alignedbuf = align_ptr<4>(buf, actualsize);
 
+  spdlog::debug("poll_watches...");
   short revents = 0;
+  currently_polling = 1;
   int event_count = inotify->poll(POLLIN, revents, -1);
-  spdlog::debug("poll_watches: {}", event_count);
+  currently_polling = 0;
+  if (event_count == -1)
+  {
+    auto pre = "poll error: ";
+    switch (errno)
+    {
+    case EFAULT:
+      spdlog::error("poll: EFAULT");
+      throw std::runtime_error(fmt::format("{}fds points outside the process's accessible address space. The array given as argument was not contained in the calling program's address space.", pre));
+
+    case EINTR:
+      spdlog::info("poll: interrupted by signal.", pre);
+      return;
+
+    case EINVAL:
+      spdlog::error("poll: EINVAL");
+      throw std::runtime_error(fmt::format("{}The nfds value exceeds the RLIMIT_NOFILE value or the timeout value expressed in *ip is invalid (negative).", pre));
+
+    case ENOMEM:
+      spdlog::error("poll: ENOMEM");
+      throw std::runtime_error(fmt::format("{}Unable to allocate memory for kernel data structures.", pre));
+    default:
+      spdlog::error("poll: unknown errno value");
+      throw std::runtime_error(fmt::format("{}Unknown errno value.", pre));
+    }
+  }
+  spdlog::debug("poll_watches -> {} [0x{:x}]", event_count, revents);
 
   auto len = inotify->read(alignedbuf, actualsize);
   spdlog::debug("read {} bytes", len);

@@ -39,6 +39,32 @@ void fw::dm::dtls::Inotify::init()
     }
     throw std::runtime_error(ost.str());
   }
+  if (syscall_pipe(pipe_fds) == -1)
+  {
+    std::ostringstream ost;
+    ost << "Could not initialize pipe: ";
+    switch (errno)
+    {
+    case EFAULT:
+      ost << "pipefd is not valid [EFAULT].";
+      break;
+
+    case EINVAL:
+      ost << "(pipe2()) Invalid value in flags [EINVAL].";
+      break;
+
+    case EMFILE:
+      ost << "The per-process limit on the number of open file descriptors\n"
+          << "has been reached [EMFILE].";
+      break;
+
+    case ENFILE:
+      ost << "The system-wide limit on the total number of open files has\n"
+          << "been reached [ENFILE].";
+      break;
+    }
+    throw std::runtime_error(ost.str());
+  }
 }
 
 fw::dm::dtls::Inotify::~Inotify()
@@ -82,6 +108,18 @@ int fw::dm::dtls::Inotify::syscall_poll(struct pollfd* fds, nfds_t nfds,
 {
   return ::poll(fds, nfds, timeout_ms);
 }
+
+int fw::dm::dtls::Inotify::syscall_pipe(int pipefd[2])
+{
+  return ::pipe(pipefd);
+}
+
+ssize_t fw::dm::dtls::Inotify::syscall_write(int fd, const void* buf, size_t count)
+{
+  return ::write(fd, buf, count);
+}
+
+
 
 
 fw::dm::dtls::Watch::Watch(Inotify& inotify_,
