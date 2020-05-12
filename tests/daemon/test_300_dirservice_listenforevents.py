@@ -122,6 +122,6 @@ def run_test(tempdir):
         fs.create_dir("dir")
         fs.create_dir("otherdir")
 
-        runner = unittest.TextTestRunner()
+        runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(unittest.makeSuite(TestCase))
         return result.wasSuccessful()

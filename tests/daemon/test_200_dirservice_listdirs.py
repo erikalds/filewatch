@@ -118,6 +118,6 @@ def run_test(tempdir):
         fs.create_dir(os.path.join("dir1", "dir4"))
         fs.create_dir(os.path.join("dir1", "dir5"))
 
-        runner = unittest.TextTestRunner()
+        runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(unittest.makeSuite(TestCase))
         return result.wasSuccessful()

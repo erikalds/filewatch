@@ -120,6 +120,6 @@ def run_test(tempdir):
         fs.create_file(os.path.join("dir1", "file4.txt"), "file4")
         fs.create_file(os.path.join("dir1", "file5.txt"), "file5")
 
-        runner = unittest.TextTestRunner()
+        runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(unittest.makeSuite(TestCase))
         return result.wasSuccessful()
