@@ -25,6 +25,7 @@
 #   NO-7540 KLÆBU
 #   NORWAY
 
+import logging
 import os
 import re
 import subprocess
@@ -150,6 +151,8 @@ def handle_args(argv):
     return objs
 
 def main(argv):
+    logging.basicConfig(level=logging.INFO,
+                        format="[%(asctime)s] [%(levelname)s] %(message)s")
     objs = handle_args(argv)
     starttime = time.time()
     with create_tempdir(".") as tempdir:
