@@ -178,14 +178,24 @@ namespace fw::dm
 
   void signal_handler(int sig)
   {
-    if (g_server == nullptr)
-    {
-      return;
-    }
-
     if (SIGTERM == sig || SIGINT == sig)
     {
-      g_server->stop();
+      if (SIGTERM == sig)
+      {
+        spdlog::warn("SIGTERM received");
+      }
+      else
+      {
+        spdlog::warn("SIGINT received");
+      }
+
+      if (g_server != nullptr)
+      {
+        spdlog::info("Stopping server.");
+        g_server->stop();
+      }
+
+      std::signal(sig, signal_handler);
     }
   }
 
@@ -213,6 +223,7 @@ namespace fw::dm
     services->register_services(builder);
     server = builder.BuildAndStart();
     spdlog::info("server listening at localhost:45678");
+    spdlog::info("server can be terminated with Ctrl-C");
     server->Wait();
     return 0;
   }
