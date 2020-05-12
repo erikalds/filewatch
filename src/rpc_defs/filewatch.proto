@@ -105,6 +105,7 @@ message DirectoryEvent {
     FILE_REMOVED = 1;
     DIRECTORY_ADDED = 2;
     DIRECTORY_REMOVED = 3;
+    WATCHING_DIRECTORY = 4;
   }
   Event event = 1;  // What happened
   string name = 2;  // Name of directory containing filename or dirname

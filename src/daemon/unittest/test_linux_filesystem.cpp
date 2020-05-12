@@ -436,29 +436,58 @@ TEST_CASE("notify DirectoryEventListener", "[LinuxFileSystem]")
   fw::dm::OSFileSystem<DummyFileSystem> fs(
     "/home/user/rootdir", std::move(ptr),
     std::make_unique<DummyLoopThreadFactory>(threads));
-  LoggingDirectoryEventListener listener;
   fs.add_dir("/", "dir", 12356780);
   fs.add_file("/dir", "filename", 12356789);
+  fs.add_dir("/dir", "dirname", 12356790);
+  LoggingDirectoryEventListener listener;
   fs.watch("/dir", listener);
+  REQUIRE(listener.events.size() == 1);
+  CHECK(listener.events[0].event == filewatch::DirectoryEvent::WATCHING_DIRECTORY);
+  CHECK(listener.events[0].containing_dir == "/dir");
+  CHECK(listener.events[0].dir_name == ".");
+  CHECK(listener.events[0].mtime == 0);
+
   SECTION("add file")
   {
     inotify->file_added("/home/user/rootdir/dir", "filename");
     threads.run_once();
-    REQUIRE(listener.events.size() == 1);
-    CHECK(listener.events[0].event == filewatch::DirectoryEvent::FILE_ADDED);
-    CHECK(listener.events[0].containing_dir == "/dir");
-    CHECK(listener.events[0].dir_name == "filename");
-    CHECK(listener.events[0].mtime == 12356789);
+    REQUIRE(listener.events.size() == 2);
+    CHECK(listener.events[1].event == filewatch::DirectoryEvent::FILE_ADDED);
+    CHECK(listener.events[1].containing_dir == "/dir");
+    CHECK(listener.events[1].dir_name == "filename");
+    CHECK(listener.events[1].mtime == 12356789);
   }
   SECTION("remove file")
   {
+    fs.rm_file("/dir", "filename");
     inotify->file_removed("/home/user/rootdir/dir", "filename");
     threads.run_once();
-    REQUIRE(listener.events.size() == 1);
-    CHECK(listener.events[0].event == filewatch::DirectoryEvent::FILE_REMOVED);
-    CHECK(listener.events[0].containing_dir == "/dir");
-    CHECK(listener.events[0].dir_name == "filename");
-    CHECK(listener.events[0].mtime == 12356789);
+    REQUIRE(listener.events.size() == 2);
+    CHECK(listener.events[1].event == filewatch::DirectoryEvent::FILE_REMOVED);
+    CHECK(listener.events[1].containing_dir == "/dir");
+    CHECK(listener.events[1].dir_name == "filename");
+    CHECK(listener.events[1].mtime == 0);
+  }
+  SECTION("add directory")
+  {
+    inotify->file_added("/home/user/rootdir/dir", "dirname");
+    threads.run_once();
+    REQUIRE(listener.events.size() == 2);
+    CHECK(listener.events[1].event == filewatch::DirectoryEvent::DIRECTORY_ADDED);
+    CHECK(listener.events[1].containing_dir == "/dir");
+    CHECK(listener.events[1].dir_name == "dirname");
+    CHECK(listener.events[1].mtime == 12356790);
+  }
+  SECTION("remove directory")
+  {
+    fs.rm_dir("/dir", "dirname");
+    inotify->file_removed("/home/user/rootdir/dir", "dirname");
+    threads.run_once();
+    REQUIRE(listener.events.size() == 2);
+    CHECK(listener.events[1].event == filewatch::DirectoryEvent::DIRECTORY_REMOVED);
+    CHECK(listener.events[1].containing_dir == "/dir");
+    CHECK(listener.events[1].dir_name == "dirname");
+    CHECK(listener.events[1].mtime == 0);
   }
 }
 

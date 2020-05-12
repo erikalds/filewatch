@@ -5,6 +5,7 @@
 
 #  include "common/loop_thread.h"
 #  include "defaultfilesystem.h"
+#  include "directoryeventlistener.h"
 #  include <limits.h>
 #  include <poll.h>
 #  include <sys/inotify.h>
@@ -87,7 +88,8 @@ namespace fw
       class Watch
       {
       public:
-        Watch(Inotify& inotify_, const std::filesystem::path& fullpath);
+        Watch(Inotify& inotify_, const std::filesystem::path& fullpath,
+              const std::deque<fs::DirectoryEntry>& direntries);
         Watch(const Watch&) = delete;
         Watch& operator=(const Watch&) = delete;
         Watch(Watch&&) noexcept;
@@ -106,6 +108,7 @@ namespace fw
         Inotify& inotify;
         int wd;
         std::set<DirectoryEventListener*> listeners;
+        mutable std::set<std::string> directories;
       };
 
     }  // namespace dtls
@@ -195,26 +198,28 @@ template<typename SuperClassT>
 void fw::dm::OSFileSystem<SuperClassT>::watch(std::string_view dirname,
                                               DirectoryEventListener& listener)
 {
+  const std::string dn{dirname};
   try
   {
     auto unsuspend_watch_thread = watches.empty();
 
-    auto iter = watches.find(std::string{dirname});
+    auto iter = watches.find(dn);
     if (iter == std::end(watches))
-      iter =
-        watches
-          .insert(std::make_pair(
-            std::string{dirname},
-            dtls::Watch(*inotify, this->join(this->rootdir.string(), dirname))))
-          .first;
+    {
+      dtls::Watch w{*inotify, this->join(this->rootdir.string(), dirname),
+                    this->ls(dirname)};
+      iter = watches.insert(std::make_pair(dn, std::move(w))).first;
+    }
     iter->second.add_listener(listener);
+    listener.notify(filewatch::DirectoryEvent::WATCHING_DIRECTORY,
+                    dirname, ".", 0);
 
     if (unsuspend_watch_thread)
       watch_thread->unsuspend();
   }
   catch (const std::runtime_error& e)
   {
-    throw std::runtime_error(std::string{dirname} + " error: " + e.what());
+    throw std::runtime_error(dn + " error: " + e.what());
   }
 }
 
@@ -256,35 +261,32 @@ void fw::dm::OSFileSystem<SuperClassT>::poll_watches()
 
   short revents = 0;
   int event_count = inotify->poll(POLLIN, revents, -1);
-  spdlog::debug("poll_watches: {}\n", event_count);
+  spdlog::debug("poll_watches: {}", event_count);
 
   auto len = inotify->read(alignedbuf, actualsize);
-  spdlog::debug("read {} bytes\n", len);
+  spdlog::debug("read {} bytes", len);
   inotify_event* event = nullptr;
   for (char* ptr = alignedbuf; ptr < alignedbuf + len;
        ptr += sizeof(inotify_event) + event->len)
   {
     event = reinterpret_cast<inotify_event*>(ptr);
-    spdlog::debug("processing event: {}, {} registered watche(s).\n", event->wd,
+    spdlog::debug("processing event: {}, {} registered watche(s).", event->wd,
                   watches.size());
 
-    std::string_view name{event->name, event->len};
+    std::string_view filename{event->name,
+                              std::min(static_cast<std::size_t>(event->len),
+                                       std::strlen(event->name))};
     for (auto& w : watches)
     {
       if (w.second.event(
             w.first,
             [&]() {
               auto containing_dir = w.first;
-              spdlog::debug("containing dir: {}, name: {}\n", containing_dir,
-                            name);
-              auto filename = name;
-              spdlog::debug("lambda called on {}\n",
-                            this->join(containing_dir, filename));
               return this->get_direntry(this->join(containing_dir, filename));
             },
             event))
       {
-        spdlog::debug("event processed\n");
+        spdlog::debug("event processed");
         break;
       }
     }

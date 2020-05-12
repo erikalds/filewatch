@@ -41,6 +41,13 @@ public:
     insert_child(*node, std::make_unique<FileNode>(dirname, true, mtime));
   }
 
+  void rm_dir(std::string_view containing_dirname, std::string_view dirname)
+  {
+    auto node = find_node(containing_dirname);
+    REQUIRE(node != nullptr);
+    remove_child(*node, dirname, true);
+  }
+
   FileNode* find_node(std::string_view name)
   {
     REQUIRE(name[0] == '/');
@@ -129,6 +136,32 @@ public:
     }
   }
 
+  void remove_child(FileNode& parent, std::string_view name, bool isdir)
+  {
+    FileNode* prev = nullptr;
+    auto* c = &parent.child;
+    while (*c != nullptr)
+    {
+      if ((*c)->entry.name == name && (*c)->entry.is_dir == isdir)
+      {
+        if (prev == nullptr)
+        {
+          parent.child = std::move((*c)->sibling);
+        }
+        else
+        {
+          prev->sibling = std::move((*c)->sibling);
+        }
+        return;
+      }
+      else
+      {
+        prev = c->get();
+        c = &(*c)->sibling;
+      }
+    }
+  }
+
   void add_file(std::string_view containing_dirname,
                 std::string_view filename,
                 uint64_t mtime)
@@ -137,6 +170,14 @@ public:
     auto node = find_node(containing_dirname);
     REQUIRE(node != nullptr);
     insert_child(*node, std::make_unique<FileNode>(filename, false, mtime));
+  }
+
+  void rm_file(std::string_view containing_dirname,
+               std::string_view filename)
+  {
+    auto node = find_node(containing_dirname);
+    REQUIRE(node != nullptr);
+    remove_child(*node, filename, false);
   }
 
   std::deque<fw::dm::fs::DirectoryEntry>

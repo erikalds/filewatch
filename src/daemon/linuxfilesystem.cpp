@@ -85,7 +85,8 @@ int fw::dm::dtls::Inotify::syscall_poll(struct pollfd* fds, nfds_t nfds,
 
 
 fw::dm::dtls::Watch::Watch(Inotify& inotify_,
-                           const std::filesystem::path& fullpath) :
+                           const std::filesystem::path& fullpath,
+                           const std::deque<fs::DirectoryEntry>& direntries) :
   inotify(inotify_),
   wd(inotify.add_watch(fullpath.string().c_str(),
                        // use of a signed integer operand with a binary bitwise
@@ -94,6 +95,16 @@ fw::dm::dtls::Watch::Watch(Inotify& inotify_,
                          | IN_CREATE | IN_DELETE | IN_DELETE_SELF | IN_MOVE_SELF
                          | IN_MOVED_FROM | IN_MOVED_TO))
 {
+  std::ostringstream ost;
+  for (const auto& de : direntries)
+  {
+    if (de.is_dir)
+    {
+      directories.insert(de.name);
+      ost << " " << de.name;
+    }
+  }
+
   if (wd == -1)
   {
     switch (errno)
@@ -135,16 +146,20 @@ fw::dm::dtls::Watch::Watch(Inotify& inotify_,
         "being watched by the same fd [EEXIST].");
     default:
     {
-      std::ostringstream ost;
-      ost << "Unknown error code [" << errno << "].";
-      throw std::runtime_error(ost.str());
+      std::ostringstream err;
+      err << "Unknown error code [" << errno << "].";
+      throw std::runtime_error(err.str());
     }
     }
   }
+  spdlog::info("Watching {} [{}] [{} ]", fullpath.string(), wd, ost.str());
 }
 
 fw::dm::dtls::Watch::Watch(Watch&& other) noexcept :
-  inotify(other.inotify), wd(other.wd), listeners(std::move(other.listeners))
+  inotify(other.inotify),
+  wd(other.wd),
+  listeners(std::move(other.listeners)),
+  directories(std::move(other.directories))
 {
   other.wd = -1;
 }
@@ -156,6 +171,7 @@ fw::dm::dtls::Watch& fw::dm::dtls::Watch::operator=(Watch&& other) noexcept
     inotify = other.inotify;
     wd = other.wd;
     listeners = std::move(other.listeners);
+    directories = std::move(other.directories);
 
     other.wd = -1;
   }
@@ -167,6 +183,7 @@ fw::dm::dtls::Watch::~Watch()
   if (wd != -1)
   {
     inotify.rm_watch(wd);
+    spdlog::info("rm_watch [{}]", wd);
   }
 }
 
@@ -183,18 +200,43 @@ bool fw::dm::dtls::Watch::remove_listener(DirectoryEventListener& listener)
 
 namespace
 {
-  auto choose_event_type(inotify_event& evt)
+  std::optional<filewatch::DirectoryEvent::Event>
+  choose_event_type(inotify_event& evt, bool is_dir)
   {
-    switch (evt.mask)
+    if ((evt.mask & IN_CREATE) != 0)
     {
-    case IN_CREATE:
-      return filewatch::DirectoryEvent::FILE_ADDED;
-    case IN_DELETE:
-      return filewatch::DirectoryEvent::FILE_REMOVED;
-    default:
-      assert(false);
-      return filewatch::DirectoryEvent::FILE_ADDED;
+      return is_dir?
+        filewatch::DirectoryEvent::DIRECTORY_ADDED
+        : filewatch::DirectoryEvent::FILE_ADDED;
     }
+    else if ((evt.mask & IN_DELETE) != 0)
+    {
+      return is_dir?
+        filewatch::DirectoryEvent::DIRECTORY_REMOVED
+        : filewatch::DirectoryEvent::FILE_REMOVED;
+    }
+    else
+    {
+      return std::optional<filewatch::DirectoryEvent::Event>();
+    }
+  }
+
+  std::string masktostr(uint32_t mask)
+  {
+    std::ostringstream ost;
+    if ((mask & IN_ACCESS) != 0) ost << " IN_ACCESS";
+    if ((mask & IN_ATTRIB) != 0) ost << " IN_ATTRIB";
+    if ((mask & IN_CLOSE_WRITE) != 0) ost << " IN_CLOSE_WRITE";
+    if ((mask & IN_CLOSE_NOWRITE) != 0) ost << " IN_CLOSE_NOWRITE";
+    if ((mask & IN_CREATE) != 0) ost << " IN_CREATE";
+    if ((mask & IN_DELETE) != 0) ost << " IN_DELETE";
+    if ((mask & IN_DELETE_SELF) != 0) ost << " IN_DELETE_SELF";
+    if ((mask & IN_MODIFY) != 0) ost << " IN_MODIFY";
+    if ((mask & IN_MOVE_SELF) != 0) ost << " IN_MOVE_SELF";
+    if ((mask & IN_MOVED_FROM) != 0) ost << " IN_MOVED_FROM";
+    if ((mask & IN_MOVED_TO) != 0) ost << " IN_MOVED_TO";
+    if ((mask & IN_OPEN) != 0) ost << " IN_OPEN";
+    return ost.str();
   }
 
 }  // anonymous namespace
@@ -209,26 +251,53 @@ bool fw::dm::dtls::Watch::event(
     return false;
   }
 
-  auto direntry = get_direntry();
-  auto pre = fmt::format(
-    "event: 0x{:x}, {}, {}, I have {} listeners", evt->mask, evt->cookie,
-    std::string_view(static_cast<char*>(evt->name), evt->len),
-    listeners.size());
+  std::string filename{evt->name,
+                       std::min(static_cast<std::size_t>(evt->len),
+                                std::strlen(evt->name))};
+  uint64_t mtime = 0;
+  auto pre = fmt::format("event:{} (0x{:x}), {}, {}, I have {} listeners",
+                         masktostr(evt->mask), evt->mask, evt->cookie, filename, listeners.size());
 
-  if (!direntry)
+  auto direntry = get_direntry();
+  bool is_dir;
+  if (direntry)
   {
-    spdlog::warn("{}, but my direntry was empty.", pre);
+    mtime = direntry->mtime;
+    filename = direntry->name;
+    is_dir = direntry->is_dir;
+  }
+  else
+  {
+    is_dir = directories.find(filename) != std::end(directories);
+    spdlog::debug("{}, but my direntry was empty [isdir: {}].", pre, is_dir);
+  }
+
+  auto event_type = choose_event_type(*evt, is_dir);
+  if (!event_type)
+  {
+    spdlog::warn("{}. Unsupported event mask.", pre);
     return false;
   }
 
-  spdlog::debug("{}, and my direntry has the name \"{}\".\n", pre,
-                direntry->name);
+  spdlog::debug("{}, and my {}name is \"{}\".",
+                pre, is_dir ? "directory " : "file", filename);
 
-  auto event_type = choose_event_type(*evt);
+  if (*event_type == filewatch::DirectoryEvent::DIRECTORY_ADDED)
+  {
+    spdlog::debug("Directory added: {}", filename);
+    directories.insert(filename);
+  }
+  else if (*event_type == filewatch::DirectoryEvent::DIRECTORY_REMOVED)
+  {
+    spdlog::debug("Directory removed: {}", filename);
+    directories.erase(filename);
+  }
+
+  spdlog::info("notify {} listeners about {}/{}: {}", listeners.size(),
+               containing_dir, filename, *event_type);
   for (auto* listener : listeners)
   {
-    listener->notify(event_type, containing_dir, direntry->name,
-                     direntry->mtime);
+    listener->notify(*event_type, containing_dir, filename, mtime);
   }
   return true;
 }

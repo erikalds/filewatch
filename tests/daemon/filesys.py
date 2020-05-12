@@ -64,6 +64,14 @@ class FilesystemCleanup:
         if self.dirs is not None:
             self.dirs.append(os.path.join(subpath))
 
+    def rm_file(self, subpath):
+        os.unlink(os.path.join(self.rootdir, subpath))
+        self.files.remove(os.path.join(subpath))
+
+    def rm_dir(self, subpath):
+        os.rmdir(os.path.join(self.rootdir, subpath))
+        self.dirs.remove(os.path.join(subpath))
+
     def mtime(self, subpath):
         stat = os.stat(os.path.join(self.rootdir, subpath))
         return math.floor(stat.st_mtime * 1000)

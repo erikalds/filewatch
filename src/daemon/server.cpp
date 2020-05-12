@@ -77,16 +77,16 @@ namespace fw::dm
       {
       }
 
-      void notify(filewatch::DirectoryEvent::Event /*event*/,
-                  std::string_view /*containing_dir*/,
-                  std::string_view /*dir_name*/,
+      void notify(filewatch::DirectoryEvent::Event event,
+                  std::string_view containing_dir,
+                  std::string_view dir_name,
                   uint64_t mtime) override
       {
         filewatch::DirectoryEvent direvt;
-        direvt.set_event(filewatch::DirectoryEvent::DIRECTORY_ADDED);
-        direvt.set_name("/dir");
+        direvt.set_event(event);
+        direvt.set_name(std::string(containing_dir));
         direvt.mutable_modification_time()->set_epoch(mtime);
-        direvt.mutable_dirname()->set_name("subdir");
+        direvt.mutable_dirname()->set_name(std::string(dir_name));
         direvt.mutable_dirname()->mutable_modification_time()->set_epoch(mtime);
         writer->Write(direvt);
       }
@@ -127,12 +127,6 @@ namespace fw::dm
         while (!context->IsCancelled())
         {
           std::this_thread::yield();
-          // filewatch::DirectoryEvent direvt;
-          // direvt.set_event(filewatch::DirectoryEvent::DIRECTORY_ADDED);
-          // direvt.set_name("/dir");
-          // direvt.mutable_dirname()->set_name("subdir");
-          // direvt.mutable_dirname()->mutable_modification_time()->set_epoch(0);
-          // writer->Write(direvt);
         }
         dirview->unregister_event_listener(listener);
         return grpc::Status::OK;
