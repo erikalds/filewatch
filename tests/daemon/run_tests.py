@@ -50,7 +50,7 @@ def group_tests(testlist):
     for test in testlist:
         mo = re.match(".*?test_([0-9]).*", test)
         if not mo:
-            print("WARNING: Ignoring test %s." % test)
+            logging.warning("Ignoring test %s." % test)
             continue
 
         group = int(mo.group(1))
@@ -69,12 +69,12 @@ class TemporaryDir:
 
     def __enter__(self):
         self.path = tempfile.mkdtemp(dir=self.containing_dir)
-        print("Created tempdir: %s" % self.path)
+        logging.info("Created tempdir: %s" % self.path)
         return self
 
     def __exit__(self, type_, value, traceback):
         os.rmdir(self.path)
-        print("Deleted tempdir: %s" % self.path)
+        logging.info("Deleted tempdir: %s" % self.path)
 
 
 def create_tempdir(containing_dir):
@@ -96,12 +96,12 @@ class RunningProcess:
             errtext = "%s exited prematurely with exit code: %d"
             raise Exception(errtext % (procname, optional_exit_code))
 
-        print("Terminating %s" % procname)
+        logging.info("Terminating %s" % procname)
         self.proc.terminate()
         try:
             exit_code = self.proc.wait(3)
         except subprocess.TimeoutExpired:
-            print("%s did not die in 3 seconds, killing..." % procname)
+            logging.error("%s did not die in 3 seconds, killing..." % procname)
             self.proc.kill()
             try:
                 exit_code = self.proc.wait(5)
@@ -148,46 +148,57 @@ def handle_args(argv):
         argv.pop(idx)
         objs.append(TeeOutput(argv.pop(idx)))
 
+    if '--log-debug' in argv:
+        objs.append('debug')
+
     return objs
+
 
 def main(argv):
     logging.basicConfig(level=logging.INFO,
-                        format="[%(asctime)s] [%(levelname)s] %(message)s")
+                        format="[%(asctime)s] [%(levelname)s] [systest] %(message)s")
     objs = handle_args(argv)
     starttime = time.time()
-    with create_tempdir(".") as tempdir:
-        with run_process([argv[1], tempdir.path]) as p:
-            all_tests = group_tests(argv[2:])
-            keys = list(all_tests.keys())
-            keys.sort()
-            assert(is_sorted(keys))
-            for group in keys:
-                failures = 0
-                for test in all_tests[group]:
-                    print("Running test %s..." % test)
-                    testmod = os.path.splitext(test)[0]
-                    try:
-                        exec("import %s" % testmod)
-                        retval = eval("%s.run_test(tempdir.path)" % testmod)
-                        if retval is not None and retval is False:
-                            print("test %s failed" % test)
+    failures = 0
+    try:
+        with create_tempdir(".") as tempdir:
+            fwdaemon_args = [tempdir.path]
+            if 'debug' in objs:
+                fwdaemon_args.append('--log-level=debug')
+            with run_process([argv[1]] + fwdaemon_args) as p:
+                all_tests = group_tests(argv[2:])
+                keys = list(all_tests.keys())
+                keys.sort()
+                assert(is_sorted(keys))
+                for group in keys:
+                    for test in all_tests[group]:
+                        logging.info("Running test %s..." % test)
+                        testmod = os.path.splitext(test)[0]
+                        try:
+                            exec("import %s" % testmod)
+                            retval = eval("%s.run_test(tempdir.path)" % testmod)
+                            if retval is not None and retval is False:
+                                logging.error("test %s failed" % test)
+                                failures += 1
+                            else:
+                                logging.info("test %s succeeded" % test)
+                        except:
+                            import traceback
+                            traceback.print_exc()
                             failures += 1
-                        else:
-                            print("test %s succeeded" % test)
-                    except:
-                        import traceback
-                        traceback.print_exc()
-                        failures += 1
-                        print("test %s failed" % test)
+                            logging.error("test %s failed" % test)
 
-                if failures > 0:
-                    print("%d tests failed in group %d. Bailing out." % (failures,
-                                                                         group))
-                    return failures
+                    if failures > 0:
+                        logging.error("%d tests failed in group %d. Bailing out."
+                                      % (failures, group))
+                        break
+    except Exception as e:
+        logging.error(str(e))
+        failures += 1
 
-    print("Tests ran for %f s" % (time.time() - starttime))
+    logging.info("Tests ran for %f s" % (time.time() - starttime))
 
-    return 0
+    return failures
 
 
 if __name__ == '__main__':
