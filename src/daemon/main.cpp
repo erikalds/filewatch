@@ -40,15 +40,18 @@ static constexpr auto USAGE =
   R"(filewatch daemon.
 
 Usage:
-    fwdaemon DIR
-    fwdaemon --run-unit-tests [--tee-output=FILE] [--use-colour=(auto|yes|no)]
+    fwdaemon [--log-level=LEVEL] DIR
+    fwdaemon --run-unit-tests [--tee-output=FILE] [--use-colour=(auto|yes|no)] [--list-tests] [--log-level=LEVEL]
     fwdaemon (-h | --help)
     fwdaemon --version
 
 Options:
     --run-unit-tests            Run the unit tests.
+    --list-tests                List available unit tests.
     --tee-output=FILE           Put test output in FILE as well as stderr/stdout.
     --use-colour=(auto|yes|no)  Use colour in output.
+    --log-level=LEVEL           Set log level (error|warn|info|debug).
+                                Default: info.
     -h --help                   Show this screen.
     --version                   Show version.
 )";
@@ -63,6 +66,31 @@ int main(int argc, const char* argv[])
                    true,  // show help if requested
                    "fwdaemon 0.1");  // version string
 
+  auto log_level = args["--log-level"];
+  if (log_level)
+  {
+    if (log_level.asString() == "debug")
+    {
+      spdlog::set_level(spdlog::level::debug);
+    }
+    else if (log_level.asString() == "error")
+    {
+      spdlog::set_level(spdlog::level::err);
+    }
+    else if (log_level.asString() == "info")
+    {
+      spdlog::set_level(spdlog::level::info);
+    }
+    else if (log_level.asString() == "warn")
+    {
+      spdlog::set_level(spdlog::level::warn);
+    }
+    else
+    {
+      spdlog::error("Unrecognized log level: {}", log_level.asString());
+      return -2;
+    }
+  }
   try
   {
     if (args["--run-unit-tests"].asBool())
@@ -111,11 +139,15 @@ std::vector<const char*> filter_args(int argc, const char** argv)
   std::vector<const char*> rawargs{argv, std::next(argv, argc)};
   for (auto iter = rawargs.begin(); iter != rawargs.end();)
   {
-    if (std::string_view(*iter) == "--run-unit-tests")
+    std::string_view a{*iter};
+    if (a == "--run-unit-tests"
+        || a.substr(0, 13) == "--tee-output="
+        || a.substr(0, 12) == "--log-level=")
     {
       iter = rawargs.erase(iter);
     }
-    else if (std::string_view(*iter) == "--tee-output")
+    else if (a == "--tee-output"
+             || a == "--log-level")
     {
       iter = rawargs.erase(iter);
       iter = rawargs.erase(iter);
