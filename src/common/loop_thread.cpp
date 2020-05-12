@@ -35,7 +35,7 @@ namespace threading
       bool is_stopped() const override { return nv_is_stopped(); }
 
     private:
-      void nv_join() { thread.join(); }
+      void nv_join();
       bool nv_is_joinable() const { return thread.joinable(); }
       bool nv_is_suspended() const;
       bool nv_is_stopped() const { return !thread.joinable(); }
@@ -72,12 +72,23 @@ namespace threading
       std::lock_guard<std::mutex> sentry(suspended_mutex);
       suspended = true;
     }
+
     void DefaultLoopThread::nv_unsuspend()
     {
       std::lock_guard<std::mutex> sentry(suspended_mutex);
       suspended = false;
       suspended_condition.notify_one();
     }
+
+    void DefaultLoopThread::nv_join()
+    {
+      if (nv_is_suspended())
+      {
+        nv_unsuspend();
+      }
+      thread.join();
+    }
+
     bool DefaultLoopThread::nv_is_suspended() const
     {
       std::lock_guard<std::mutex> sentry(suspended_mutex);
