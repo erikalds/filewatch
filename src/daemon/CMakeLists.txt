@@ -6,6 +6,7 @@ endif()
 
 add_executable(fwdaemon
   defaultfilesystem.cpp
+  details/inotify.cpp
   directoryeventlistener.cpp
   directoryview.cpp
   directorywatcher.cpp
@@ -21,6 +22,7 @@ add_executable(fwdaemon
   unittest/test_filesystemwatcherfactory.cpp
   unittest/test_linux_filesystem.cpp
   defaultfilesystem.h
+  details/inotify.h
   directoryeventlistener.h
   directoryview.h
   directorywatcher.h

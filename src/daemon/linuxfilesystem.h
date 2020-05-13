@@ -5,11 +5,9 @@
 
 #  include "common/loop_thread.h"
 #  include "defaultfilesystem.h"
+#  include "details/inotify.h"
 #  include "directoryeventlistener.h"
-#  include <limits.h>
-#  include <poll.h>
-#  include <sys/inotify.h>
-#  include <unistd.h>
+#  include <sys/inotify.h>  // can be removed when poll_watches is moved to cpp
 
 #  include <spdlog/spdlog.h>
 
@@ -19,122 +17,12 @@
 
 struct inotify_event;
 
-namespace threading
-{
-  class LoopThread;
-  class LoopThreadFactory;
-}  // namespace threading
-
 namespace fw
 {
   namespace dm
   {
     namespace dtls
     {
-      class Inotify
-      {
-      protected:
-        Inotify();
-        void init();
-
-      public:
-        template<typename T>
-        static std::unique_ptr<Inotify> create()
-        {
-          std::unique_ptr<Inotify> ptr{new T};
-          ptr->init();
-          return ptr;
-        }
-
-        virtual ~Inotify();
-        int close();
-
-        int add_watch(const char* pathname, uint32_t mask)
-        {
-          int rv = syscall_inotify_add_watch(inotify_fd, pathname, mask);
-          // wake up poll thread so that it can poll on the newly added wds
-          char buf = static_cast<char>(1);
-          syscall_write(pipe_fds[1], &buf, 1);
-          return rv;
-        }
-        int rm_watch(int wd)
-        {
-          int rv = syscall_inotify_rm_watch(inotify_fd, wd);
-          // wake up poll thread so that it can poll on the remaining wds
-          char buf = static_cast<char>(2);
-          syscall_write(pipe_fds[1], &buf, 1);
-          return rv;
-        }
-        ssize_t read(void* buf, size_t count)
-        {
-          return syscall_read(inotify_fd, buf, count);
-        }
-        void terminate_poll()
-        {
-          char buf = static_cast<char>(0);
-          syscall_write(pipe_fds[1], &buf, 1);
-        }
-        int poll(short events, short& revents, int timeout_ms)
-        {
-          struct pollfd pfd[2];
-          pfd[0].fd = inotify_fd;
-          pfd[0].events = events;
-          pfd[1].fd = pipe_fds[0];
-          pfd[1].events = events;
-          short expected_events = events | POLLHUP | POLLERR | POLLNVAL;
-          while (true)
-          {
-            int poll_result = syscall_poll(pfd, 2, timeout_ms);
-            if ((pfd[0].revents & expected_events) != 0 || poll_result == -1)
-            {
-              revents = pfd[0].revents;
-              return poll_result;
-            }
-            else if ((pfd[1].revents & expected_events) != 0)
-            {
-              char buf;
-              syscall_read(pipe_fds[0], &buf,
-                           1);  // remove written char to pipe
-              if (static_cast<int>(buf) == 0)
-              {
-                spdlog::debug("read termination signal from pipe");
-                errno = EINTR;
-                return -1;
-              }
-              else if (static_cast<int>(buf) == 1)
-              {
-                spdlog::debug("read add signal from pipe - poll again");
-              }
-              else if (static_cast<int>(buf) == 2)
-              {
-                spdlog::debug("read rm signal from pipe - poll again");
-              }
-              else
-              {
-                spdlog::debug("read unknown signal from pipe: {} - poll again",
-                              static_cast<int>(buf));
-              }
-            }
-          }
-        }
-
-      private:
-        virtual int syscall_inotify_init();
-        virtual int syscall_close(int fd);
-
-        virtual int syscall_inotify_add_watch(int fd, const char* pathname,
-                                              uint32_t mask);
-        virtual int syscall_inotify_rm_watch(int fd, int wd);
-        virtual ssize_t syscall_read(int fd, void* buf, size_t count);
-        virtual int syscall_poll(struct pollfd* fds, nfds_t nfds,
-                                 int timeout_ms);
-        virtual int syscall_pipe2(std::array<int, 2>& pipefd, int flags);
-        virtual ssize_t syscall_write(int fd, const void* buf, size_t count);
-
-        int inotify_fd = -1;
-        std::array<int, 2> pipe_fds = {0, 0};
-      };
-
       class Watch
       {
       public:
