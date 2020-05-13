@@ -14,8 +14,8 @@ namespace threading
     {
     public:
       explicit DefaultLoopThread(std::function<void()> iter_fun) :
-        iteration_function(std::move(iter_fun)), thread([&]() { this->run(); }),
-        stopped(false), suspended(true)
+        iteration_function(std::move(iter_fun)), stopped(false),
+        suspended(true), thread{[&]() { this->run(); }}
       {
       }
       DefaultLoopThread(const DefaultLoopThread&) = delete;
@@ -44,11 +44,11 @@ namespace threading
       void run();
 
       std::function<void()> iteration_function;
-      std::thread thread;
       std::atomic<bool> stopped;
       bool suspended;
       mutable std::mutex suspended_mutex;
       std::condition_variable suspended_condition;
+      std::thread thread;
     };
 
     DefaultLoopThread::~DefaultLoopThread()
