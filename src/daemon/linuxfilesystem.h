@@ -85,8 +85,7 @@ namespace fw
           while (true)
           {
             int poll_result = syscall_poll(pfd, 2, timeout_ms);
-            if ((pfd[0].revents & expected_events) != 0
-                || poll_result == -1)
+            if ((pfd[0].revents & expected_events) != 0 || poll_result == -1)
             {
               revents = pfd[0].revents;
               return poll_result;
@@ -94,7 +93,8 @@ namespace fw
             else if ((pfd[1].revents & expected_events) != 0)
             {
               char buf;
-              syscall_read(pipe_fds[0], &buf, 1); // remove written char to pipe
+              syscall_read(pipe_fds[0], &buf,
+                           1);  // remove written char to pipe
               if (static_cast<int>(buf) == 0)
               {
                 spdlog::debug("read termination signal from pipe");
@@ -132,7 +132,7 @@ namespace fw
         virtual ssize_t syscall_write(int fd, const void* buf, size_t count);
 
         int inotify_fd = -1;
-        std::array<int, 2> pipe_fds = { 0, 0 };
+        std::array<int, 2> pipe_fds = {0, 0};
       };
 
       class Watch
@@ -275,8 +275,8 @@ void fw::dm::OSFileSystem<SuperClassT>::watch(std::string_view dirname,
       iter = watches.insert(std::make_pair(dn, std::move(w))).first;
     }
     iter->second.add_listener(listener);
-    listener.notify(filewatch::DirectoryEvent::WATCHING_DIRECTORY,
-                    dirname, ".", 0);
+    listener.notify(filewatch::DirectoryEvent::WATCHING_DIRECTORY, dirname, ".",
+                    0);
 
     if (unsuspend_watch_thread)
     {
@@ -345,7 +345,11 @@ void fw::dm::OSFileSystem<SuperClassT>::poll_watches()
     {
     case EFAULT:
       spdlog::error("poll: EFAULT");
-      throw std::runtime_error(fmt::format("{}fds points outside the process's accessible address space. The array given as argument was not contained in the calling program's address space.", pre));
+      throw std::runtime_error(
+        fmt::format("{}fds points outside the process's accessible address "
+                    "space. The array given as argument was not contained in "
+                    "the calling program's address space.",
+                    pre));
 
     case EINTR:
       spdlog::info("poll: interrupted by signal.", pre);
@@ -353,11 +357,15 @@ void fw::dm::OSFileSystem<SuperClassT>::poll_watches()
 
     case EINVAL:
       spdlog::error("poll: EINVAL");
-      throw std::runtime_error(fmt::format("{}The nfds value exceeds the RLIMIT_NOFILE value or the timeout value expressed in *ip is invalid (negative).", pre));
+      throw std::runtime_error(
+        fmt::format("{}The nfds value exceeds the RLIMIT_NOFILE value or the "
+                    "timeout value expressed in *ip is invalid (negative).",
+                    pre));
 
     case ENOMEM:
       spdlog::error("poll: ENOMEM");
-      throw std::runtime_error(fmt::format("{}Unable to allocate memory for kernel data structures.", pre));
+      throw std::runtime_error(fmt::format(
+        "{}Unable to allocate memory for kernel data structures.", pre));
     default:
       spdlog::error("poll: unknown errno value");
       throw std::runtime_error(fmt::format("{}Unknown errno value.", pre));
@@ -375,9 +383,9 @@ void fw::dm::OSFileSystem<SuperClassT>::poll_watches()
     spdlog::debug("processing event: {}, {} registered watche(s).", event->wd,
                   watches.size());
 
-    std::string_view filename{event->name,
-                              std::min(static_cast<std::size_t>(event->len),
-                                       std::strlen(event->name))};
+    std::string_view filename{
+      event->name,
+      std::min(static_cast<std::size_t>(event->len), std::strlen(event->name))};
     for (auto& w : watches)
     {
       if (w.second.event(

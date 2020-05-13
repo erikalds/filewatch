@@ -142,8 +142,7 @@ std::vector<const char*> filter_args(int argc, const char** argv)
   for (auto iter = rawargs.begin(); iter != rawargs.end();)
   {
     std::string_view a{*iter};
-    if (a == "--run-unit-tests"
-        || a.starts_with(tee_output)
+    if (a == "--run-unit-tests" || a.starts_with(tee_output)
         || a.starts_with(log_level))
     {
       iter = rawargs.erase(iter);

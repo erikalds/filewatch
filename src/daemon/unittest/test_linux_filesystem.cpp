@@ -4,6 +4,7 @@
 #include "dummyfilesystem.h"
 
 #include <catch2/catch.hpp>
+
 #include <queue>
 
 #ifdef __linux__
@@ -87,12 +88,12 @@ namespace
 
     ssize_t syscall_read(int fd, void* buf, size_t count) override
     {
-      if (fd == 42) // pipe fd
+      if (fd == 42)  // pipe fd
       {
         const size_t n = std::min(count, pipe_queue.size());
         for (size_t i = 0; i < n; ++i)
         {
-          static_cast<char*>(buf)[i] = pipe_queue.front(); // NOLINT ptr arithm
+          static_cast<char*>(buf)[i] = pipe_queue.front();  // NOLINT ptr arithm
           pipe_queue.pop();
         }
       }
@@ -150,13 +151,13 @@ namespace
             }
           }
         }
-        if (fds[i].fd == 42) // NOLINT - pipe fd
+        if (fds[i].fd == 42)  // NOLINT - pipe fd
         {
-          if ((fds[i].events & POLLIN) != 0) // NOLINT
+          if ((fds[i].events & POLLIN) != 0)  // NOLINT
           {
             if (!pipe_queue.empty())
             {
-              fds[i].revents |= POLLIN; // NOLINT
+              fds[i].revents |= POLLIN;  // NOLINT
               ++fd_count_with_events;
             }
           }
@@ -184,7 +185,8 @@ namespace
       {
         for (size_t i = 0; i < count; ++i)
         {
-          pipe_queue.push(static_cast<const char*>(buf)[i]); // NOLINT ptr arith
+          pipe_queue.push(
+            static_cast<const char*>(buf)[i]);  // NOLINT ptr arith
         }
 
         return static_cast<ssize_t>(count);
@@ -484,7 +486,8 @@ TEST_CASE("notify DirectoryEventListener", "[LinuxFileSystem]")
   LoggingDirectoryEventListener listener;
   fs.watch("/dir", listener);
   REQUIRE(listener.events.size() == 1);
-  CHECK(listener.events[0].event == filewatch::DirectoryEvent::WATCHING_DIRECTORY);
+  CHECK(listener.events[0].event
+        == filewatch::DirectoryEvent::WATCHING_DIRECTORY);
   CHECK(listener.events[0].containing_dir == "/dir");
   CHECK(listener.events[0].dir_name == ".");
   CHECK(listener.events[0].mtime == 0);
@@ -515,7 +518,8 @@ TEST_CASE("notify DirectoryEventListener", "[LinuxFileSystem]")
     inotify->file_added("/home/user/rootdir/dir", "dirname");
     threads.run_once();
     REQUIRE(listener.events.size() == 2);
-    CHECK(listener.events[1].event == filewatch::DirectoryEvent::DIRECTORY_ADDED);
+    CHECK(listener.events[1].event
+          == filewatch::DirectoryEvent::DIRECTORY_ADDED);
     CHECK(listener.events[1].containing_dir == "/dir");
     CHECK(listener.events[1].dir_name == "dirname");
     CHECK(listener.events[1].mtime == 12356790);
@@ -526,7 +530,8 @@ TEST_CASE("notify DirectoryEventListener", "[LinuxFileSystem]")
     inotify->file_removed("/home/user/rootdir/dir", "dirname");
     threads.run_once();
     REQUIRE(listener.events.size() == 2);
-    CHECK(listener.events[1].event == filewatch::DirectoryEvent::DIRECTORY_REMOVED);
+    CHECK(listener.events[1].event
+          == filewatch::DirectoryEvent::DIRECTORY_REMOVED);
     CHECK(listener.events[1].containing_dir == "/dir");
     CHECK(listener.events[1].dir_name == "dirname");
     CHECK(listener.events[1].mtime == 0);

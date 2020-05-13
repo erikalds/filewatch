@@ -172,8 +172,7 @@ public:
     insert_child(*node, std::make_unique<FileNode>(filename, false, mtime));
   }
 
-  void rm_file(std::string_view containing_dirname,
-               std::string_view filename)
+  void rm_file(std::string_view containing_dirname, std::string_view filename)
   {
     auto node = find_node(containing_dirname);
     REQUIRE(node != nullptr);
