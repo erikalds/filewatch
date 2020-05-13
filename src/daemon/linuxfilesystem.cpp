@@ -5,7 +5,6 @@
 #  include "common/bw_combine.h"
 #  include "common/loop_thread.h"
 #  include "directoryeventlistener.h"
-
 #  include <sys/inotify.h>
 
 fw::dm::dtls::Watch::Watch(Inotify& inotify_,
@@ -231,7 +230,7 @@ fw::dm::dtls::safe_poll_inotify(Inotify& inotify,
   spdlog::debug("poll_watches...");
   short revents = 0;
   currently_polling = 1;
-  int event_count = inotify.poll(POLLIN, revents, -1); // -1 => block forever
+  int event_count = inotify.poll(POLLIN, revents, -1);  // -1 => block forever
   currently_polling = 0;
   if (event_count == -1)
   {
@@ -239,10 +238,11 @@ fw::dm::dtls::safe_poll_inotify(Inotify& inotify,
     switch (errno)
     {
     case EFAULT:
-      spdlog::error("{}fds points outside the process's accessible address\n"
-                    "space. The array given as argument was not contained in\n"
-                    "the calling program's address space. [EFAULT]",
-                    pre);
+      spdlog::error(
+        "{}fds points outside the process's accessible address\n"
+        "space. The array given as argument was not contained in\n"
+        "the calling program's address space. [EFAULT]",
+        pre);
       break;
 
     case EINTR:
@@ -250,14 +250,18 @@ fw::dm::dtls::safe_poll_inotify(Inotify& inotify,
       break;
 
     case EINVAL:
-      spdlog::error("{}The nfds value exceeds the RLIMIT_NOFILE value or the\n"
-                    "timeout value expressed in *ip is invalid (negative).\n"
-                    "[EINVAL]", pre);
+      spdlog::error(
+        "{}The nfds value exceeds the RLIMIT_NOFILE value or the\n"
+        "timeout value expressed in *ip is invalid (negative).\n"
+        "[EINVAL]",
+        pre);
       break;
 
     case ENOMEM:
-      spdlog::error("{}Unable to allocate memory for kernel data structures.\n"
-                    "[ENOMEM]", pre);
+      spdlog::error(
+        "{}Unable to allocate memory for kernel data structures.\n"
+        "[ENOMEM]",
+        pre);
       break;
 
     default:
@@ -275,16 +279,17 @@ namespace
   template<int alignment, typename T>
   T* align_ptr(T* ptr, std::size_t& wanted_size)
   {
-    void* vptr = reinterpret_cast<void*>(ptr); // NOLINT - reinterpret_cast
+    void* vptr = reinterpret_cast<void*>(ptr);  // NOLINT - reinterpret_cast
     void* alignedvptr = std::align(alignment, sizeof(T), vptr, wanted_size);
-    return reinterpret_cast<T*>(alignedvptr); // NOLINT - reinterpret_cast
+    return reinterpret_cast<T*>(alignedvptr);  // NOLINT - reinterpret_cast
   }
 
 }  // namespace
 
-void fw::dm::dtls::process_inotify_events(Inotify& inotify,
-                                          const std::map<std::string, dtls::Watch>& watches,
-                                          const fw::dm::dtls::GetDirEntryFun& get_direntry) noexcept
+void fw::dm::dtls::process_inotify_events(
+  Inotify& inotify,
+  const std::map<std::string, dtls::Watch>& watches,
+  const fw::dm::dtls::GetDirEntryFun& get_direntry) noexcept
 {
   constexpr const std::size_t maxstructsize =
     sizeof(inotify_event) + NAME_MAX + 1 + 4;
@@ -297,9 +302,9 @@ void fw::dm::dtls::process_inotify_events(Inotify& inotify,
   inotify_event* event = nullptr;
   // NOLINTNEXTLINE - pointer arithmetic
   for (char* ptr = alignedbuf; ptr < alignedbuf + len;
-       ptr += sizeof(inotify_event) + event->len) // NOLINT - ptr arithmetic
+       ptr += sizeof(inotify_event) + event->len)  // NOLINT - ptr arithmetic
   {
-    event = reinterpret_cast<inotify_event*>(ptr); // NOLINT - reinterpret_cast
+    event = reinterpret_cast<inotify_event*>(ptr);  // NOLINT - reinterpret_cast
     std::string filename{event->name,  // NOLINT
                          std::min(static_cast<std::size_t>(event->len),
                                   std::strlen(event->name))};  // NOLINT

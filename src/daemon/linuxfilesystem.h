@@ -22,7 +22,8 @@ namespace fw
   {
     namespace dtls
     {
-      using GetDirEntryFun = std::function<std::optional<fs::DirectoryEntry>(std::string_view, std::string_view)>;
+      using GetDirEntryFun = std::function<std::optional<fs::DirectoryEntry>(
+        std::string_view, std::string_view)>;
 
       class Watch
       {
@@ -77,14 +78,15 @@ namespace fw
       std::atomic<int> currently_polling = 0;
     };
 
-    namespace dtls {
-
+    namespace dtls
+    {
       std::optional<short>
       safe_poll_inotify(Inotify& inotify,
                         std::atomic<int>& currently_polling) noexcept;
-      void process_inotify_events(Inotify& inotify,
-                                  const std::map<std::string, dtls::Watch>& watches,
-                                  const GetDirEntryFun& get_direntry) noexcept;
+      void
+      process_inotify_events(Inotify& inotify,
+                             const std::map<std::string, dtls::Watch>& watches,
+                             const GetDirEntryFun& get_direntry) noexcept;
       void close_inotify(Inotify& inotify) noexcept;
 
     }  // namespace dtls
@@ -194,13 +196,11 @@ void fw::dm::OSFileSystem<SuperClassT>::poll_watches()
   if (!optional_revents)
     return;
 
-  process_inotify_events(*inotify, watches,
-                         [&](std::string_view containing_dir,
-                             std::string_view filename)
-                         {
-                           return this->get_direntry(this->join(containing_dir,
-                                                                filename));
-                         });
+  process_inotify_events(
+    *inotify, watches,
+    [&](std::string_view containing_dir, std::string_view filename) {
+      return this->get_direntry(this->join(containing_dir, filename));
+    });
 }
 
 #endif  // __linux__
