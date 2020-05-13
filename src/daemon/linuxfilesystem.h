@@ -128,11 +128,11 @@ namespace fw
         virtual ssize_t syscall_read(int fd, void* buf, size_t count);
         virtual int syscall_poll(struct pollfd* fds, nfds_t nfds,
                                  int timeout_ms);
-        virtual int syscall_pipe(int pipefd[2]);
+        virtual int syscall_pipe2(std::array<int, 2>& pipefd, int flags);
         virtual ssize_t syscall_write(int fd, const void* buf, size_t count);
 
         int inotify_fd = -1;
-        int pipe_fds[2];
+        std::array<int, 2> pipe_fds = { 0, 0 };
       };
 
       class Watch

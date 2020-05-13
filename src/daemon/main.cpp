@@ -136,18 +136,20 @@ int main(int argc, const char* argv[])
 
 std::vector<const char*> filter_args(int argc, const char** argv)
 {
+  const std::string_view tee_output{"--tee-output="};
+  const std::string_view log_level{"--log-level="};
   std::vector<const char*> rawargs{argv, std::next(argv, argc)};
   for (auto iter = rawargs.begin(); iter != rawargs.end();)
   {
     std::string_view a{*iter};
     if (a == "--run-unit-tests"
-        || a.substr(0, 13) == "--tee-output="
-        || a.substr(0, 12) == "--log-level=")
+        || a.starts_with(tee_output)
+        || a.starts_with(log_level))
     {
       iter = rawargs.erase(iter);
     }
-    else if (a == "--tee-output"
-             || a == "--log-level")
+    else if (a == tee_output.substr(0, tee_output.size() - 1)
+             || a == log_level.substr(0, log_level.size() - 1))
     {
       iter = rawargs.erase(iter);
       iter = rawargs.erase(iter);

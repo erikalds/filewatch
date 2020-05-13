@@ -5,6 +5,7 @@
 #  include "common/loop_thread.h"
 #  include "directoryeventlistener.h"
 #  include <sys/inotify.h>
+#  include <fcntl.h>
 #  include <unistd.h>
 
 #  include <cassert>
@@ -39,7 +40,7 @@ void fw::dm::dtls::Inotify::init()
     }
     throw std::runtime_error(ost.str());
   }
-  if (syscall_pipe(pipe_fds) == -1)
+  if (syscall_pipe2(pipe_fds, O_CLOEXEC) == -1)
   {
     std::ostringstream ost;
     ost << "Could not initialize pipe: ";
@@ -109,9 +110,9 @@ int fw::dm::dtls::Inotify::syscall_poll(struct pollfd* fds, nfds_t nfds,
   return ::poll(fds, nfds, timeout_ms);
 }
 
-int fw::dm::dtls::Inotify::syscall_pipe(int pipefd[2])
+int fw::dm::dtls::Inotify::syscall_pipe2(std::array<int, 2>& pipefd, int flags)
 {
-  return ::pipe(pipefd);
+  return ::pipe2(pipefd.data(), flags);
 }
 
 ssize_t fw::dm::dtls::Inotify::syscall_write(int fd, const void* buf, size_t count)
@@ -241,39 +242,44 @@ namespace
   std::optional<filewatch::DirectoryEvent::Event>
   choose_event_type(inotify_event& evt, bool is_dir)
   {
-    if ((evt.mask & IN_CREATE) != 0)
+    if ((evt.mask & IN_CREATE) != 0) // NOLINT
     {
       return is_dir?
         filewatch::DirectoryEvent::DIRECTORY_ADDED
         : filewatch::DirectoryEvent::FILE_ADDED;
     }
-    else if ((evt.mask & IN_DELETE) != 0)
+    if ((evt.mask & IN_DELETE) != 0) // NOLINT
     {
       return is_dir?
         filewatch::DirectoryEvent::DIRECTORY_REMOVED
         : filewatch::DirectoryEvent::FILE_REMOVED;
     }
-    else
-    {
-      return std::optional<filewatch::DirectoryEvent::Event>();
-    }
+
+    return std::optional<filewatch::DirectoryEvent::Event>();
   }
 
   std::string masktostr(uint32_t mask)
   {
+    static std::map<uint32_t, std::string> maskstrs{{IN_ACCESS, "IN_ACCESS"},
+                                                    {IN_ATTRIB, "IN_ATTRIB"},
+                                                    {IN_CLOSE_WRITE, "IN_CLOSE_WRITE"},
+                                                    {IN_CLOSE_NOWRITE, "IN_CLOSE_NOWRITE"},
+                                                    {IN_CREATE, "IN_CREATE"},
+                                                    {IN_DELETE, "IN_DELETE"},
+                                                    {IN_DELETE_SELF, "IN_DELETE_SELF"},
+                                                    {IN_MODIFY, "IN_MODIFY"},
+                                                    {IN_MOVE_SELF, "IN_MOVE_SELF"},
+                                                    {IN_MOVED_FROM, "IN_MOVED_FROM"},
+                                                    {IN_MOVED_TO, "IN_MOVED_TO"},
+                                                    {IN_OPEN, "IN_OPEN"}};
     std::ostringstream ost;
-    if ((mask & IN_ACCESS) != 0) ost << " IN_ACCESS";
-    if ((mask & IN_ATTRIB) != 0) ost << " IN_ATTRIB";
-    if ((mask & IN_CLOSE_WRITE) != 0) ost << " IN_CLOSE_WRITE";
-    if ((mask & IN_CLOSE_NOWRITE) != 0) ost << " IN_CLOSE_NOWRITE";
-    if ((mask & IN_CREATE) != 0) ost << " IN_CREATE";
-    if ((mask & IN_DELETE) != 0) ost << " IN_DELETE";
-    if ((mask & IN_DELETE_SELF) != 0) ost << " IN_DELETE_SELF";
-    if ((mask & IN_MODIFY) != 0) ost << " IN_MODIFY";
-    if ((mask & IN_MOVE_SELF) != 0) ost << " IN_MOVE_SELF";
-    if ((mask & IN_MOVED_FROM) != 0) ost << " IN_MOVED_FROM";
-    if ((mask & IN_MOVED_TO) != 0) ost << " IN_MOVED_TO";
-    if ((mask & IN_OPEN) != 0) ost << " IN_OPEN";
+    for (const auto& p : maskstrs)
+    {
+      if ((mask & p.first) != 0)
+      {
+        ost << " " << p.second;
+      }
+    }
     return ost.str();
   }
 
@@ -289,15 +295,15 @@ bool fw::dm::dtls::Watch::event(
     return false;
   }
 
-  std::string filename{evt->name,
+  std::string filename{evt->name, // NOLINT
                        std::min(static_cast<std::size_t>(evt->len),
-                                std::strlen(evt->name))};
+                                std::strlen(evt->name))}; // NOLINT
   uint64_t mtime = 0;
   auto pre = fmt::format("event:{} (0x{:x}), {}, {}, I have {} listeners",
                          masktostr(evt->mask), evt->mask, evt->cookie, filename, listeners.size());
 
   auto direntry = get_direntry();
-  bool is_dir;
+  bool is_dir = false;
   if (direntry)
   {
     mtime = direntry->mtime;

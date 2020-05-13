@@ -92,7 +92,7 @@ namespace
         const size_t n = std::min(count, pipe_queue.size());
         for (size_t i = 0; i < n; ++i)
         {
-          static_cast<char*>(buf)[i] = pipe_queue.front();
+          static_cast<char*>(buf)[i] = pipe_queue.front(); // NOLINT ptr arithm
           pipe_queue.pop();
         }
       }
@@ -150,13 +150,13 @@ namespace
             }
           }
         }
-        if (fds[i].fd == 42) // pipe fd
+        if (fds[i].fd == 42) // NOLINT - pipe fd
         {
-          if ((fds[i].events & POLLIN) != 0)
+          if ((fds[i].events & POLLIN) != 0) // NOLINT
           {
-            if (pipe_queue.size() > 0)
+            if (!pipe_queue.empty())
             {
-              fds[i].revents |= POLLIN;
+              fds[i].revents |= POLLIN; // NOLINT
               ++fd_count_with_events;
             }
           }
@@ -172,7 +172,7 @@ namespace
       return fd_count_with_events;
     }
 
-    int syscall_pipe(int pipefd[2]) override
+    int syscall_pipe2(std::array<int, 2>& pipefd, int /*flags*/) override
     {
       pipefd[0] = 42;
       pipefd[1] = 44;
@@ -183,7 +183,9 @@ namespace
       if (fd == 44)
       {
         for (size_t i = 0; i < count; ++i)
-          pipe_queue.push(static_cast<const char*>(buf)[i]);
+        {
+          pipe_queue.push(static_cast<const char*>(buf)[i]); // NOLINT ptr arith
+        }
 
         return static_cast<ssize_t>(count);
       }
