@@ -2,6 +2,7 @@
 
 #ifdef __linux__
 
+#  include "common/bw_combine.h"
 #  include "common/loop_thread.h"
 #  include "directoryeventlistener.h"
 
@@ -11,11 +12,9 @@ fw::dm::dtls::Watch::Watch(Inotify& inotify_,
                            const std::deque<fs::DirectoryEntry>& direntries) :
   inotify(inotify_),
   wd(inotify.add_watch(fullpath.string().c_str(),
-                       // use of a signed integer operand with a binary bitwise
-                       // operator [hicpp-signed-bitwise]
-                       IN_CLOSE_WRITE  // NOLINT
-                         | IN_CREATE | IN_DELETE | IN_DELETE_SELF | IN_MOVE_SELF
-                         | IN_MOVED_FROM | IN_MOVED_TO))
+                       util::bw_combine<unsigned short>(
+                         IN_CLOSE_WRITE, IN_CREATE, IN_DELETE, IN_DELETE_SELF,
+                         IN_MOVE_SELF, IN_MOVED_FROM, IN_MOVED_TO)))
 {
   std::ostringstream ost;
   for (const auto& de : direntries)

@@ -2,6 +2,7 @@
 
 #ifdef __linux__
 
+#  include "common/bw_combine.h"
 #  include <fcntl.h>
 #  include <sys/inotify.h>
 #  include <unistd.h>
@@ -110,20 +111,6 @@ namespace
     return (static_cast<unsigned short>(pfd.revents) & expected_events) != 0;
   }
 
-  template<typename RetT, typename T>
-  RetT bw_combine(T val)
-  {
-    assert(val < std::numeric_limits<RetT>::max());
-    return static_cast<RetT>(val);
-  }
-
-  template<typename RetT, typename T, typename... Us>
-  RetT bw_combine(T val, Us... other)
-  {
-    assert(val < std::numeric_limits<RetT>::max());
-    return static_cast<RetT>(val) | bw_combine<RetT>(other...);
-  }
-
 }  // anonymous namespace
 
 int fw::dm::dtls::Inotify::poll(short events, short& revents, int timeout_ms)
@@ -134,7 +121,7 @@ int fw::dm::dtls::Inotify::poll(short events, short& revents, int timeout_ms)
   pfd[1].fd = pipe_fds[0];
   pfd[1].events = events;
   auto expected_events =
-    bw_combine<unsigned short>(events, POLLHUP, POLLERR, POLLNVAL);
+    util::bw_combine<unsigned short>(events, POLLHUP, POLLERR, POLLNVAL);
   while (true)
   {
     int poll_result = syscall_poll(pfd.data(), 2, timeout_ms);

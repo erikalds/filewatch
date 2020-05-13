@@ -7,6 +7,7 @@ endif()
 add_library(common
   loop_thread.cpp
   tee_output.cpp
+  bw_combine.h
   loop_thread.h
   tee_output.h
   )
