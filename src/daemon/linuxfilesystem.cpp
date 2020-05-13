@@ -315,8 +315,35 @@ void fw::dm::dtls::process_inotify_events(Inotify& inotify,
       }
     }
   }
-
 }
 
+void fw::dm::dtls::close_inotify(Inotify& inotify) noexcept
+{
+  if (inotify.close() == -1)
+  {
+    const auto* pre = "close(inotify_fd) failed: ";
+    switch (errno)
+    {
+    case EBADF:
+      spdlog::warn("{}inotify_fd is not a valid open file descriptor.", pre);
+      break;
+    case EINTR:
+      spdlog::warn("{}close was interrupted by a signal.", pre);
+      break;
+    case EIO:
+      spdlog::warn("{}An I/O error occurred.", pre);
+      break;
+    case ENOSPC:
+      spdlog::warn("{}No space left on device.", pre);
+      break;
+    case EDQUOT:
+      spdlog::warn("{}Disk quota exceeded.", pre);
+      break;
+    default:
+      spdlog::warn("{}Unknown reason.", pre);
+      break;
+    }
+  }
+}
 
 #endif  // __linux__
