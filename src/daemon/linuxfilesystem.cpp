@@ -6,6 +6,7 @@
 #  include "common/loop_thread.h"
 #  include "directoryeventlistener.h"
 
+#  include <sys/inotify.h>
 
 fw::dm::dtls::Watch::Watch(Inotify& inotify_,
                            const std::filesystem::path& fullpath,
@@ -164,25 +165,22 @@ namespace
 
 }  // anonymous namespace
 
-bool fw::dm::dtls::Watch::event(
-  std::string_view containing_dir,
-  const std::function<std::optional<fs::DirectoryEntry>()>& get_direntry,
-  inotify_event* evt) const
+bool fw::dm::dtls::Watch::event(std::string_view containing_dir,
+                                std::string filename,
+                                const GetDirEntryFun& get_direntry,
+                                inotify_event* evt) const
 {
   if (evt->wd != wd)
   {
     return false;
   }
 
-  std::string filename{evt->name,  // NOLINT
-                       std::min(static_cast<std::size_t>(evt->len),
-                                std::strlen(evt->name))};  // NOLINT
   uint64_t mtime = 0;
   auto pre = fmt::format("event:{} (0x{:x}), {}, {}, I have {} listeners",
                          masktostr(evt->mask), evt->mask, evt->cookie, filename,
                          listeners.size());
 
-  auto direntry = get_direntry();
+  auto direntry = get_direntry(containing_dir, filename);
   bool is_dir = false;
   if (direntry)
   {
@@ -225,5 +223,100 @@ bool fw::dm::dtls::Watch::event(
   }
   return true;
 }
+
+std::optional<short>
+fw::dm::dtls::safe_poll_inotify(Inotify& inotify,
+                                std::atomic<int>& currently_polling) noexcept
+{
+  spdlog::debug("poll_watches...");
+  short revents = 0;
+  currently_polling = 1;
+  int event_count = inotify.poll(POLLIN, revents, -1); // -1 => block forever
+  currently_polling = 0;
+  if (event_count == -1)
+  {
+    const auto* pre = "poll error: ";
+    switch (errno)
+    {
+    case EFAULT:
+      spdlog::error("{}fds points outside the process's accessible address\n"
+                    "space. The array given as argument was not contained in\n"
+                    "the calling program's address space. [EFAULT]",
+                    pre);
+      break;
+
+    case EINTR:
+      spdlog::info("poll: interrupted by signal.", pre);
+      break;
+
+    case EINVAL:
+      spdlog::error("{}The nfds value exceeds the RLIMIT_NOFILE value or the\n"
+                    "timeout value expressed in *ip is invalid (negative).\n"
+                    "[EINVAL]", pre);
+      break;
+
+    case ENOMEM:
+      spdlog::error("{}Unable to allocate memory for kernel data structures.\n"
+                    "[ENOMEM]", pre);
+      break;
+
+    default:
+      spdlog::error("{}unknown errno value [{}]", pre, errno);
+      break;
+    }
+    return std::optional<short>();
+  }
+  spdlog::debug("poll_watches -> {} [0x{:x}]", event_count, revents);
+  return revents;
+}
+
+namespace
+{
+  template<int alignment, typename T>
+  T* align_ptr(T* ptr, std::size_t& wanted_size)
+  {
+    void* vptr = reinterpret_cast<void*>(ptr); // NOLINT - reinterpret_cast
+    void* alignedvptr = std::align(alignment, sizeof(T), vptr, wanted_size);
+    return reinterpret_cast<T*>(alignedvptr); // NOLINT - reinterpret_cast
+  }
+
+}  // namespace
+
+void fw::dm::dtls::process_inotify_events(Inotify& inotify,
+                                          const std::map<std::string, dtls::Watch>& watches,
+                                          const fw::dm::dtls::GetDirEntryFun& get_direntry) noexcept
+{
+  constexpr const std::size_t maxstructsize =
+    sizeof(inotify_event) + NAME_MAX + 1 + 4;
+  std::array<char, maxstructsize> buf{};
+  auto actualsize = maxstructsize;
+  char* alignedbuf = align_ptr<4>(buf.data(), actualsize);
+
+  auto len = inotify.read(alignedbuf, actualsize);
+  spdlog::debug("read {} bytes", len);
+  inotify_event* event = nullptr;
+  // NOLINTNEXTLINE - pointer arithmetic
+  for (char* ptr = alignedbuf; ptr < alignedbuf + len;
+       ptr += sizeof(inotify_event) + event->len) // NOLINT - ptr arithmetic
+  {
+    event = reinterpret_cast<inotify_event*>(ptr); // NOLINT - reinterpret_cast
+    std::string filename{event->name,  // NOLINT
+                         std::min(static_cast<std::size_t>(event->len),
+                                  std::strlen(event->name))};  // NOLINT
+    spdlog::debug("processing event: {}, {} registered watche(s).", event->wd,
+                  watches.size());
+
+    for (const auto& w : watches)
+    {
+      if (w.second.event(w.first, filename, get_direntry, event))
+      {
+        spdlog::debug("event processed");
+        break;
+      }
+    }
+  }
+
+}
+
 
 #endif  // __linux__

@@ -39,7 +39,7 @@ namespace fw
         int rm_watch(int wd);
         ssize_t read(void* buf, size_t count);
         void terminate_poll();
-        int poll(short events, short& revents, int timeout_ms);
+        int poll(short events, short& revents, int timeout_ms) noexcept;
 
       private:
         virtual int syscall_inotify_init();

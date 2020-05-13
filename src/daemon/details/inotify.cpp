@@ -113,7 +113,7 @@ namespace
 
 }  // anonymous namespace
 
-int fw::dm::dtls::Inotify::poll(short events, short& revents, int timeout_ms)
+int fw::dm::dtls::Inotify::poll(short events, short& revents, int timeout_ms) noexcept
 {
   std::array<struct pollfd, 2> pfd{};
   pfd[0].fd = inotify_fd;

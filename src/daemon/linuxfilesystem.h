@@ -7,7 +7,6 @@
 #  include "defaultfilesystem.h"
 #  include "details/inotify.h"
 #  include "directoryeventlistener.h"
-#  include <sys/inotify.h>  // can be removed when poll_watches is moved to cpp
 
 #  include <spdlog/spdlog.h>
 
@@ -23,6 +22,8 @@ namespace fw
   {
     namespace dtls
     {
+      using GetDirEntryFun = std::function<std::optional<fs::DirectoryEntry>(std::string_view, std::string_view)>;
+
       class Watch
       {
       public:
@@ -38,8 +39,8 @@ namespace fw
         bool remove_listener(DirectoryEventListener& listener);
 
         bool event(std::string_view containing_dir,
-                   const std::function<std::optional<fs::DirectoryEntry>()>&
-                     get_direntry,
+                   std::string filename,
+                   const GetDirEntryFun& get_direntry,
                    inotify_event* evt) const;
 
       private:
@@ -76,6 +77,16 @@ namespace fw
       std::atomic<int> currently_polling = 0;
     };
 
+    namespace dtls {
+
+      std::optional<short>
+      safe_poll_inotify(Inotify& inotify,
+                        std::atomic<int>& currently_polling) noexcept;
+      void process_inotify_events(Inotify& inotify,
+                                  const std::map<std::string, dtls::Watch>& watches,
+                                  const GetDirEntryFun& get_direntry) noexcept;
+
+    }  // namespace dtls
   }  // namespace dm
 }  // namespace fw
 
@@ -200,95 +211,20 @@ void fw::dm::OSFileSystem<SuperClassT>::stop_watching(
   }
 }
 
-namespace
-{
-  template<int alignment, typename T>
-  T* align_ptr(T* ptr, std::size_t& wanted_size)
-  {
-    void* vptr = reinterpret_cast<void*>(ptr);
-    void* alignedvptr = std::align(alignment, sizeof(T), vptr, wanted_size);
-    return reinterpret_cast<T*>(alignedvptr);
-  }
-
-}  // namespace
-
 template<typename SuperClassT>
 void fw::dm::OSFileSystem<SuperClassT>::poll_watches()
 {
-  constexpr const std::size_t maxstructsize =
-    sizeof(inotify_event) + NAME_MAX + 1 + 4;
-  char buf[maxstructsize];
-  auto actualsize = maxstructsize;
-  char* alignedbuf = align_ptr<4>(buf, actualsize);
+  auto optional_revents = safe_poll_inotify(*inotify, currently_polling);
+  if (!optional_revents)
+    return;
 
-  spdlog::debug("poll_watches...");
-  short revents = 0;
-  currently_polling = 1;
-  int event_count = inotify->poll(POLLIN, revents, -1);
-  currently_polling = 0;
-  if (event_count == -1)
-  {
-    auto pre = "poll error: ";
-    switch (errno)
-    {
-    case EFAULT:
-      spdlog::error("poll: EFAULT");
-      throw std::runtime_error(
-        fmt::format("{}fds points outside the process's accessible address "
-                    "space. The array given as argument was not contained in "
-                    "the calling program's address space.",
-                    pre));
-
-    case EINTR:
-      spdlog::info("poll: interrupted by signal.", pre);
-      return;
-
-    case EINVAL:
-      spdlog::error("poll: EINVAL");
-      throw std::runtime_error(
-        fmt::format("{}The nfds value exceeds the RLIMIT_NOFILE value or the "
-                    "timeout value expressed in *ip is invalid (negative).",
-                    pre));
-
-    case ENOMEM:
-      spdlog::error("poll: ENOMEM");
-      throw std::runtime_error(fmt::format(
-        "{}Unable to allocate memory for kernel data structures.", pre));
-    default:
-      spdlog::error("poll: unknown errno value");
-      throw std::runtime_error(fmt::format("{}Unknown errno value.", pre));
-    }
-  }
-  spdlog::debug("poll_watches -> {} [0x{:x}]", event_count, revents);
-
-  auto len = inotify->read(alignedbuf, actualsize);
-  spdlog::debug("read {} bytes", len);
-  inotify_event* event = nullptr;
-  for (char* ptr = alignedbuf; ptr < alignedbuf + len;
-       ptr += sizeof(inotify_event) + event->len)
-  {
-    event = reinterpret_cast<inotify_event*>(ptr);
-    spdlog::debug("processing event: {}, {} registered watche(s).", event->wd,
-                  watches.size());
-
-    std::string_view filename{
-      event->name,
-      std::min(static_cast<std::size_t>(event->len), std::strlen(event->name))};
-    for (auto& w : watches)
-    {
-      if (w.second.event(
-            w.first,
-            [&]() {
-              auto containing_dir = w.first;
-              return this->get_direntry(this->join(containing_dir, filename));
-            },
-            event))
-      {
-        spdlog::debug("event processed");
-        break;
-      }
-    }
-  }
+  process_inotify_events(*inotify, watches,
+                         [&](std::string_view containing_dir,
+                             std::string_view filename)
+                         {
+                           return this->get_direntry(this->join(containing_dir,
+                                                                filename));
+                         });
 }
 
 #endif  // __linux__
