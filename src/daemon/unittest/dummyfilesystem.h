@@ -39,6 +39,8 @@ public:
     auto node = find_node(containing_dirname);
     REQUIRE(node != nullptr);
     insert_child(*node, std::make_unique<FileNode>(dirname, true, mtime));
+    spdlog::debug("add_dir({}, {}, {}) -> {} - {}", containing_dirname, dirname,
+                  mtime, node->entry.name, dirname);
   }
 
   void rm_dir(std::string_view containing_dirname, std::string_view dirname)
@@ -46,10 +48,14 @@ public:
     auto node = find_node(containing_dirname);
     REQUIRE(node != nullptr);
     remove_child(*node, dirname, true);
+    spdlog::debug("rm_dir({}, {}) -> {} - {}", containing_dirname, dirname,
+                  node->entry.name, dirname);
   }
 
   FileNode* find_node(std::string_view name)
   {
+    std::ostringstream ost;
+    ost << "[m] find_node(" << name << ") -> ";
     REQUIRE(name[0] == '/');
     name = name.substr(1);
     auto* current = &root;
@@ -58,15 +64,19 @@ public:
     {
       auto pos = name.find_first_of('/');
       if (pos == std::string_view::npos)
-        pos = name.size() - 1;
+        pos = name.size();
 
       parent = current;
       current = nullptr;
-      auto curname = name.substr(0, pos + 1);
-      name = name.substr(pos + 1);
+      auto curname = name.substr(0, pos);
+      ost << "/" << curname;
+      name = name.substr(std::min(pos + 1, name.size()));
       auto child = parent->child.get();
+      std::ostringstream ost2;
+      ost2 << "[";
       while (child != nullptr)
       {
+        ost2 << " " << child->entry.name;
         if (child->entry.name == curname)
         {
           current = child;
@@ -74,12 +84,20 @@ public:
         }
         child = child->sibling.get();
       }
+      ost2 << " ]";
+      if (!current)
+        ost << "? " << ost2.str();
     }
+    if (current)
+      ost << " OK";
+    spdlog::debug(ost.str());
     return current;
   }
 
   const FileNode* find_node(std::string_view name) const
   {
+    std::ostringstream ost;
+    ost << "[c] find_node(" << name << ") -> ";
     REQUIRE(name[0] == '/');
     name = name.substr(1);
     auto* current = &root;
@@ -93,10 +111,14 @@ public:
       parent = current;
       current = nullptr;
       auto curname = name.substr(0, pos_next_slash);
+      ost << "/" << curname;
       name = name.substr(std::min(pos_next_slash + 1, name.size()));
       auto child = parent->child.get();
+      std::ostringstream ost2;
+      ost2 << "[";
       while (child != nullptr)
       {
+        ost2 << " " << child->entry.name;
         if (child->entry.name == curname)
         {
           current = child;
@@ -104,7 +126,13 @@ public:
         }
         child = child->sibling.get();
       }
+      ost2 << " ]";
+      if (!current)
+        ost << "? " << ost2.str();
     }
+    if (current)
+      ost << " OK";
+    spdlog::debug(ost.str());
     return current;
   }
 
@@ -170,6 +198,8 @@ public:
     auto node = find_node(containing_dirname);
     REQUIRE(node != nullptr);
     insert_child(*node, std::make_unique<FileNode>(filename, false, mtime));
+    spdlog::debug("add_file({}, {}, {}) -> {} - {}", containing_dirname, filename,
+                  mtime, node->entry.name, filename);
   }
 
   void rm_file(std::string_view containing_dirname, std::string_view filename)
@@ -177,6 +207,8 @@ public:
     auto node = find_node(containing_dirname);
     REQUIRE(node != nullptr);
     remove_child(*node, filename, false);
+    spdlog::debug("rm_file({}, {}) -> {} - {}", containing_dirname, filename,
+                  node->entry.name, filename);
   }
 
   std::deque<fw::dm::fs::DirectoryEntry>
@@ -209,10 +241,9 @@ public:
     auto node = find_node(entryname);
     if (!node)
     {
-      spdlog::debug("DFS: Could not find direntry: {}\n", entryname);
+      spdlog::debug("Could not find direntry: {}\n", entryname);
       return std::optional<fw::dm::fs::DirectoryEntry>();
     }
-    spdlog::debug("DFS: Found direntry: {}\n", entryname);
     return node->entry;
   }
 
