@@ -59,6 +59,13 @@ class FilesystemCleanup:
         if self.files is not None:
             self.files.append(os.path.join(subpath))
 
+    def write_file_trunc(self, subpath, contents):
+        if subpath not in self.files:
+            raise Exception("Expected {} to be an existing file.".format(subpath))
+
+        with open(os.path.join(self.rootdir, subpath), 'w') as fileobj:
+            fileobj.write(contents)
+
     def create_dir(self, subpath):
         os.mkdir(os.path.join(self.rootdir, subpath))
         if self.dirs is not None:

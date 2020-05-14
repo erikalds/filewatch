@@ -27,13 +27,17 @@
 
 import grpc
 
+from filesys import FilesystemCleanup
+
 import filewatch_pb2
 import filewatch_pb2_grpc
 
 def run_test(tempdir):
-    channel = grpc.insecure_channel('localhost:45678')
-    stub = filewatch_pb2_grpc.FileStub(channel)
-    fname = filewatch_pb2.Filename()
-    fname.dirname.name = "/"
-    fname.name = "test.txt"
-    filecontent = stub.GetContents(fname)
+    with FilesystemCleanup(tempdir) as fs:
+        fs.create_file("test.txt", "contents")
+        channel = grpc.insecure_channel('localhost:45678')
+        stub = filewatch_pb2_grpc.FileStub(channel)
+        fname = filewatch_pb2.Filename()
+        fname.dirname.name = "/"
+        fname.name = "test.txt"
+        filecontent = stub.GetContents(fname)

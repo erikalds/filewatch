@@ -29,6 +29,7 @@
 #include "directoryeventlistener.h"
 #include "directoryview.h"
 #include "filesystemfactory.h"
+#include "fileview.h"
 #include "filewatch.grpc.pb.h"
 
 #include <grpc++/security/server_credentials.h>
@@ -139,13 +140,22 @@ namespace fw::dm
     class FileService : public filewatch::File::Service
     {
     public:
+      explicit FileService(FileSystemFactory& factory_) :
+        factory(factory_)
+      {}
+
       ::grpc::Status
       GetContents(::grpc::ServerContext* /*context*/,
-                  const ::filewatch::Filename* /*request*/,
-                  ::filewatch::FileContent* /*response*/) override
+                  const ::filewatch::Filename* request,
+                  ::filewatch::FileContent* response) override
       {
-        return grpc::Status::OK;
+        auto fileview = factory.create_file(request->dirname().name(),
+                                            request->name());
+        return fileview->fill_contents(*response);
       }
+
+    private:
+      FileSystemFactory& factory;
     };
 
   }  // anonymous namespace
@@ -155,7 +165,7 @@ namespace fw::dm
   {
   public:
     explicit Services(std::unique_ptr<FileSystemFactory> factory_) :
-      factory(std::move(factory_)), Directory(*factory)
+      factory(std::move(factory_)), Directory(*factory), File(*factory)
     {
     }
 

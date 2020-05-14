@@ -13,6 +13,8 @@ add_executable(fwdaemon
   filesystem.cpp
   filesystemfactory.cpp
   filesystemwatcherfactory.cpp
+  fileview.cpp
+  filewatcher.cpp
   linuxfilesystem.cpp
   main.cpp
   server.cpp
@@ -20,6 +22,7 @@ add_executable(fwdaemon
   unittest/test_directorywatcher.cpp
   unittest/test_filesystem.cpp
   unittest/test_filesystemwatcherfactory.cpp
+  unittest/test_filewatcher.cpp
   unittest/test_linux_filesystem.cpp
   defaultfilesystem.h
   details/inotify.h
@@ -29,6 +32,8 @@ add_executable(fwdaemon
   filesystem.h
   filesystemfactory.h
   filesystemwatcherfactory.h
+  fileview.h
+  filewatcher.h
   linuxfilesystem.h
   server.h
   windowsfilesystem.h
