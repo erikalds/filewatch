@@ -41,6 +41,8 @@ namespace fw
       virtual bool exists(std::string_view filename) const = 0;
       virtual bool isdir(std::string_view dirname) const = 0;
 
+      virtual std::string read(std::string_view filepath) const = 0;
+
       virtual std::string join(std::string_view containing_dir,
                                std::string_view filename) const final
       {

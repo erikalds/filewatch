@@ -20,6 +20,7 @@ struct FileNode
   fw::dm::fs::DirectoryEntry entry;
   std::unique_ptr<FileNode> child;
   std::unique_ptr<FileNode> sibling;
+  std::string contents;
 };
 
 class DummyFileSystem : public fw::dm::FileSystem
@@ -211,6 +212,13 @@ public:
                   node->entry.name, filename);
   }
 
+  void write_file(std::string_view entryname, std::string_view contents)
+  {
+    auto node = find_node(entryname);
+    REQUIRE(node != nullptr);
+    node->contents = contents;
+  }
+
   std::deque<fw::dm::fs::DirectoryEntry>
   ls(std::string_view entryname) const override
   {
@@ -256,6 +264,13 @@ public:
   {
     auto node = find_node(dirname);
     return node != nullptr && node->entry.is_dir == true;
+  }
+
+  std::string read(std::string_view filepath) const override
+  {
+    const auto* node = find_node(filepath);
+    REQUIRE(node != nullptr);
+    return node->contents;
   }
 
   void watch(std::string_view dirname,

@@ -1,6 +1,7 @@
 #include "defaultfilesystem.h"
 
 #include <spdlog/spdlog.h>
+#include <fstream>
 
 fw::dm::DefaultFileSystem::DefaultFileSystem(std::string_view rootdir_) :
   FileSystem(std::filesystem::absolute(std::filesystem::path(rootdir_)))
@@ -42,7 +43,13 @@ bool fw::dm::DefaultFileSystem::isdir(std::string_view dirname) const
   return std::filesystem::is_directory(join(rootdir.string(), dirname));
 }
 
-#include <iostream>
+std::string fw::dm::DefaultFileSystem::read(std::string_view filepath) const
+{
+  std::ifstream in(join(rootdir.string(), filepath));
+  std::string contents;
+  std::getline(in, contents, '\0');
+  return contents;
+}
 
 fw::dm::fs::DirectoryEntry
 fw::dm::DefaultFileSystem::create_direntry(const std::filesystem::path& p)

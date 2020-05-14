@@ -23,6 +23,8 @@ namespace fw
       bool exists(std::string_view filename) const override;
       bool isdir(std::string_view dirname) const override;
 
+      std::string read(std::string_view filepath) const override;
+
     protected:
       static fs::DirectoryEntry create_direntry(const std::filesystem::path& p);
     };
