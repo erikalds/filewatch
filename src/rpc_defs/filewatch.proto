@@ -127,12 +127,16 @@ message DirectoryEvent {
 //    modified.  n_lines is the number of lines that was modified.  lines
 //    contains the new content of the lines of text that was modified.
 //  - TRUNCATED: The file was emptied. linenum, n_lines is 0, lines is empty.
+//  - FILE_CREATED: The file was created (it was previously not existing).
+//  - FILE_REMOVED: The file was deleted.
 message FileEvent {
   enum Event {
     LINES_INSERTED = 0;
     LINES_REMOVED = 1;
     LINES_MODIFIED = 2;
     TRUNCATED = 3;
+    FILE_CREATED = 4;
+    FILE_REMOVED = 5;
   }
   Event event = 1;  // What happened
   string filename = 2;  // Name of file the event happened in

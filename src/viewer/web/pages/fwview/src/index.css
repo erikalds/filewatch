@@ -1,9 +1,44 @@
 body {
-  font: 14px "Century Gothic", Futura, sans-serif;
-  margin: 20px;
+    font: 14px "Century Gothic", Futura, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    font: 20px;
+}
+
+ul {
+    list-style: none;
+}
+
+.rstm-toggle-icon {
+    display: inline-block;
+    padding-right: 12px;
+}
+
+.rstm-toggle-icon-symbol {
+    display: inline-block;
+    font: 20px;
+    font-family: courier;
+    border-style: solid;
+    border-width: thin;
+    padding-top: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-bottom: 0px;
+}
+
+.rstm-tree-item {
+    padding: 10px;
+}
+
+.rstm-tree-item--active {
+    background-color: #CCCCCC;
+}
+
+.rstm-tree-item--focused {
+    background-color: #CCCCFF;
 }
 
 .FilewatcherView {
-    display: flex;
-    flex-direction: row;
 }
