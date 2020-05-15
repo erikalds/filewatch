@@ -7,7 +7,7 @@
 
 fw::web::FileResources::FileResources(crow::SimpleApp& app,
                                       std::shared_ptr<grpc::Channel> channel_) :
-  channel(channel_)
+  channel(std::move(channel_))
 {
   CROW_ROUTE(app, "/v1.0/files")
     ([&]{

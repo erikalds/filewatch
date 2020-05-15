@@ -40,7 +40,7 @@ namespace fw
         bool remove_listener(DirectoryEventListener& listener);
 
         bool event(std::string_view containing_dir,
-                   std::string filename,
+                   std::string_view filename,
                    const GetDirEntryFun& get_direntry,
                    inotify_event* evt) const;
 

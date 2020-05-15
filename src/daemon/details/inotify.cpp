@@ -93,7 +93,7 @@ int fw::dm::dtls::Inotify::rm_watch(int wd)
   return rv;
 }
 
-ssize_t fw::dm::dtls::Inotify::read(void* buf, size_t count)
+ssize_t fw::dm::dtls::Inotify::read(void* buf, size_t count) noexcept
 {
   return syscall_read(inotify_fd, buf, count);
 }
@@ -179,7 +179,7 @@ int fw::dm::dtls::Inotify::syscall_inotify_rm_watch(int fd, int wd)
   return inotify_rm_watch(fd, wd);
 }
 
-ssize_t fw::dm::dtls::Inotify::syscall_read(int fd, void* buf, size_t count)
+ssize_t fw::dm::dtls::Inotify::syscall_read(int fd, void* buf, size_t count) noexcept
 {
   return ::read(fd, buf, count);
 }

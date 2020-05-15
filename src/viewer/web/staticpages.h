@@ -12,7 +12,6 @@ namespace web
   {
   public:
     explicit StaticPages(crow::SimpleApp& app);
-    ~StaticPages();
   };
 
 }  // namespace web

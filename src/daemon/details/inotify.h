@@ -3,7 +3,6 @@
 
 #ifdef __linux__
 
-// #  include <limits.h>
 #  include <poll.h>  // for nfds_t
 
 #  include <spdlog/spdlog.h>
@@ -37,7 +36,7 @@ namespace fw
 
         int add_watch(const char* pathname, uint32_t mask);
         int rm_watch(int wd);
-        ssize_t read(void* buf, size_t count);
+        ssize_t read(void* buf, size_t count) noexcept;
         void terminate_poll();
         int poll(short events, short& revents, int timeout_ms) noexcept;
 
@@ -48,7 +47,7 @@ namespace fw
         virtual int syscall_inotify_add_watch(int fd, const char* pathname,
                                               uint32_t mask);
         virtual int syscall_inotify_rm_watch(int fd, int wd);
-        virtual ssize_t syscall_read(int fd, void* buf, size_t count);
+        virtual ssize_t syscall_read(int fd, void* buf, size_t count) noexcept;
         virtual int syscall_poll(struct pollfd* fds, nfds_t nfds,
                                  int timeout_ms);
         virtual int syscall_pipe2(std::array<int, 2>& pipefd, int flags);

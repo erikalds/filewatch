@@ -11,7 +11,9 @@ namespace {
     auto fullpath = fmt::format("{}{}", basedir, path);
     std::ifstream in(fullpath, std::ios_base::in | std::ios_base::binary);
     if (!in)
+    {
       return {};
+    }
 
     std::string contents;
     std::copy(std::istreambuf_iterator<char>{in},
@@ -23,17 +25,18 @@ namespace {
   crow::response static_respond(std::string_view path,
                                 std::string_view page,
                                 const std::string& content_type,
-                                std::function<std::string(std::string)> loader=crow::mustache::load_text)
+                                const std::function<std::string(std::string)>& loader=crow::mustache::load_text)
   {
-    spdlog::debug("loading page: {}{}{}",
-                  crow::mustache::detail::get_template_base_directory_ref(),
-                  path, page);
     auto webpath = fmt::format("{}{}", path, page);
+    spdlog::debug("loading page: {}{}",
+                  crow::mustache::detail::get_template_base_directory_ref(),
+                  webpath);
     crow::response res = loader(webpath);
     if (res.body.empty())
     {
       spdlog::warn("Page not found: {}", webpath);
-      return crow::response{404, fmt::format("Page not found: {}", webpath)};
+      return crow::response{404, // NOLINT - 404 is a magic number
+          fmt::format("Page not found: {}", webpath)};
     }
     res.set_header("Content-Type", content_type);
     return res;
@@ -75,5 +78,3 @@ fw::web::StaticPages::StaticPages(crow::SimpleApp& app)
        return static_respond("static/js/", page, "text/javascript");
      });
 }
-
-fw::web::StaticPages::~StaticPages() = default;

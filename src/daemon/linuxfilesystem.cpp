@@ -165,7 +165,7 @@ namespace
 }  // anonymous namespace
 
 bool fw::dm::dtls::Watch::event(std::string_view containing_dir,
-                                std::string filename,
+                                std::string_view filename,
                                 const GetDirEntryFun& get_direntry,
                                 inotify_event* evt) const
 {
@@ -189,7 +189,7 @@ bool fw::dm::dtls::Watch::event(std::string_view containing_dir,
   }
   else
   {
-    is_dir = directories.find(filename) != std::end(directories);
+    is_dir = directories.find(std::string{filename}) != std::end(directories);
     spdlog::debug("{}, but my direntry was empty [isdir: {}].", pre, is_dir);
   }
 
@@ -206,12 +206,12 @@ bool fw::dm::dtls::Watch::event(std::string_view containing_dir,
   if (*event_type == filewatch::DirectoryEvent::DIRECTORY_ADDED)
   {
     spdlog::debug("Directory added: {}", filename);
-    directories.insert(filename);
+    directories.insert(std::string{filename});
   }
   else if (*event_type == filewatch::DirectoryEvent::DIRECTORY_REMOVED)
   {
     spdlog::debug("Directory removed: {}", filename);
-    directories.erase(filename);
+    directories.erase(std::string{filename});
   }
 
   spdlog::info("notify {} listeners about {}/{}: {}", listeners.size(),
@@ -277,7 +277,7 @@ fw::dm::dtls::safe_poll_inotify(Inotify& inotify,
 namespace
 {
   template<int alignment, typename T>
-  T* align_ptr(T* ptr, std::size_t& wanted_size)
+  T* align_ptr(T* ptr, std::size_t& wanted_size) noexcept
   {
     void* vptr = reinterpret_cast<void*>(ptr);  // NOLINT - reinterpret_cast
     void* alignedvptr = std::align(alignment, sizeof(T), vptr, wanted_size);
@@ -305,18 +305,29 @@ void fw::dm::dtls::process_inotify_events(
        ptr += sizeof(inotify_event) + event->len)  // NOLINT - ptr arithmetic
   {
     event = reinterpret_cast<inotify_event*>(ptr);  // NOLINT - reinterpret_cast
-    std::string filename{event->name,  // NOLINT
-                         std::min(static_cast<std::size_t>(event->len),
-                                  std::strlen(event->name))};  // NOLINT
+    std::string_view filename{event->name,  // NOLINT
+                              std::min(static_cast<std::size_t>(event->len),
+                                       std::strlen(event->name))};  // NOLINT
     spdlog::debug("processing event: {}, {} registered watche(s).", event->wd,
                   watches.size());
 
     for (const auto& w : watches)
     {
-      if (w.second.event(w.first, filename, get_direntry, event))
+      try
       {
-        spdlog::debug("event processed");
-        break;
+        if (w.second.event(w.first, filename, get_direntry, event))
+        {
+          spdlog::debug("event processed");
+          break;
+        }
+      }
+      catch (const std::exception& e)
+      {
+        spdlog::error("Exception caught while processing events: {}", e.what());
+      }
+      catch (...)
+      {
+        spdlog::error("Unknown exception caught while processing events.");
       }
     }
   }

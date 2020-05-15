@@ -81,12 +81,12 @@ namespace
     int syscall_inotify_rm_watch(int fd, int wd) override
     {
       CHECK(fd == init_fd);
-      REQUIRE(wd < watches.size());
+      REQUIRE(wd < static_cast<int>(watches.size()));
       watches[static_cast<std::size_t>(wd)].active = false;
       return 0;
     }
 
-    ssize_t syscall_read(int fd, void* buf, size_t count) override
+    ssize_t syscall_read(int fd, void* buf, size_t count) noexcept override
     {
       if (fd == 42)  // pipe fd
       {
