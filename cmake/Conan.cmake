@@ -17,6 +17,7 @@ conan_cmake_run(
   REQUIRES
   ${CONAN_EXTRA_REQUIRES}
   catch2/2.11.0
+  crow/master
   docopt.cpp/0.6.2
   fmt/6.2.1
   spdlog/1.5.0

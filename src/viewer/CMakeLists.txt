@@ -7,6 +7,10 @@ endif()
 add_executable(filewatcher
   main.cpp
   unittest/testsomething.cpp
+  web/restserver.cpp
+  web/staticpages.cpp
+  web/restserver.h
+  web/staticpages.h
   )
 target_include_directories(filewatcher PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/../rpc_defs/rpcgen
@@ -16,6 +20,7 @@ target_link_libraries(filewatcher PRIVATE project_warnings project_options
   filewatch_rpc
   common
   CONAN_PKG::catch2
+  CONAN_PKG::crow
   CONAN_PKG::docopt.cpp
   CONAN_PKG::spdlog
   CONAN_PKG::fmt
@@ -28,3 +33,5 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"
 add_custom_target(test_filewatcher ALL
   DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/testreport.txt"
   )
+
+add_subdirectory(web/pages)

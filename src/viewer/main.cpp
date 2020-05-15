@@ -24,6 +24,7 @@
    NORWAY
 */
 #include "common/tee_output.h"
+#include "web/restserver.h"
 
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
@@ -82,7 +83,9 @@ int main(int argc, const char* argv[])
       return session.run();
     }
 
-    return 0;
+    const uint16_t port{8088};
+    fw::web::RESTServer server(port);
+    return server.run();
   }
   catch (const std::exception& e)
   {
