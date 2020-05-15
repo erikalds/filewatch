@@ -7,8 +7,10 @@ endif()
 add_executable(filewatcher
   main.cpp
   unittest/testsomething.cpp
+  web/fileresources.cpp
   web/restserver.cpp
   web/staticpages.cpp
+  web/fileresources.h
   web/restserver.h
   web/staticpages.h
   )

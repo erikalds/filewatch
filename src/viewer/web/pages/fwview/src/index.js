@@ -4,34 +4,27 @@ import TreeMenu from 'react-simple-tree-menu';
 import './index.css';
 
 class Filelist extends React.Component {
-    render() {
-        const treeData = {
-            'first-level-node-1': {               // key
-                label: 'Node 1 at the first level',
-                index: 0, // decide the rendering order on the same level
-                //...,      // any other props you need, e.g. url
-                nodes: {
-                    'second-level-node-1': {
-                        label: 'Node 1 at the second level',
-                        index: 0,
-                        nodes: {
-                            'third-level-node-1': {
-                                label: 'Node 1 at the third level',
-                                index: 0,
-                                nodes: {} // you can remove the nodes property or leave it as an empty array
-                            },
-                        },
-                    },
-                },
-            },
-            'first-level-node-2': {
-                label: 'Node 2 at the first level',
-                index: 1,
-            },
+    constructor(props) {
+        super(props);
+        this.state = {
+            treeData: {},
         };
+
+        fetch("/v1.0/files").then(response => {
+            if (!response.ok)
+                throw Error("response was bad:", response.status, response.statusText);
+
+            response.json().then(data => {
+                this.setState({
+                    treeData: data,
+                });
+            });
+        });
+    }
+    render() {
         return (
             <div className="Filelist">
-                <TreeMenu data={treeData} />
+                <TreeMenu data={this.state.treeData} />
             </div>
         );
     }

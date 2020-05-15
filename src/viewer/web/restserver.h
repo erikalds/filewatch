@@ -4,10 +4,13 @@
 #include "crow_fwd.h"
 #include <memory>
 
+namespace grpc { class Channel; }
+
 namespace fw
 {
   namespace web
   {
+    class FileResources;
     class StaticPages;
 
     class RESTServer
@@ -24,6 +27,8 @@ namespace fw
 
     private:
       std::unique_ptr<crow::SimpleApp> app; // must be created first
+      std::shared_ptr<grpc::Channel> channel; // must be created second;
+      std::unique_ptr<FileResources> file_resources;
       std::unique_ptr<StaticPages> static_pages;
     };
 
