@@ -32,7 +32,7 @@ import unittest
 import filewatch_pb2
 import filewatch_pb2_grpc
 
-from filesys import FilesystemCleanup
+from systest.filesys import FilesystemCleanup
 
 
 fs = None

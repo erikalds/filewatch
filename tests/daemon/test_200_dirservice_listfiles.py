@@ -30,7 +30,7 @@ import math
 import os
 import unittest
 
-from filesys import FilesystemCleanup
+from systest.filesys import FilesystemCleanup
 
 import filewatch_pb2
 import filewatch_pb2_grpc

@@ -27,7 +27,7 @@
 
 import grpc
 
-from filesys import FilesystemCleanup
+from systest.filesys import FilesystemCleanup
 
 import filewatch_pb2
 import filewatch_pb2_grpc
