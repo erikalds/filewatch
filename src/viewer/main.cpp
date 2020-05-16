@@ -52,6 +52,7 @@ Options:
 )";
 
 std::vector<const char*> filter_args(int argc, const char** argv);
+std::filesystem::path compose_pagedir(const std::string_view& executable_path);
 
 int main(int argc, const char* argv[])
 {
@@ -83,8 +84,10 @@ int main(int argc, const char* argv[])
       return session.run();
     }
 
-    const uint16_t port{8088};
-    fw::web::RESTServer server(port);
+    const uint16_t port{8086};
+    // NOLINTNEXTLINE - argv[0] is pointer arithmetic (!)
+    const std::filesystem::path pagedir = compose_pagedir(argv[0]);
+    fw::web::RESTServer server(port, pagedir);
     return server.run();
   }
   catch (const std::exception& e)
@@ -119,4 +122,11 @@ std::vector<const char*> filter_args(int argc, const char** argv)
     }
   }
   return rawargs;
+}
+
+std::filesystem::path compose_pagedir(const std::string_view& executable_path)
+{
+  std::filesystem::path p{executable_path};
+  p.remove_filename();
+  return p / "pages";
 }

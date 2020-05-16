@@ -2,6 +2,7 @@
 #define RESTSERVER_H
 
 #include "crow_fwd.h"
+#include <filesystem>
 #include <memory>
 
 namespace grpc { class Channel; }
@@ -16,7 +17,7 @@ namespace fw
     class RESTServer
     {
     public:
-      explicit RESTServer(uint16_t port);
+      RESTServer(uint16_t port, const std::filesystem::path& pagedir);
       RESTServer(const RESTServer&) = delete;
       RESTServer& operator=(const RESTServer&) = delete;
       RESTServer(RESTServer&&) = delete;

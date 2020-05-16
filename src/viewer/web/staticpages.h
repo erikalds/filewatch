@@ -2,6 +2,7 @@
 #define STATICPAGES_H
 
 #include "crow_fwd.h"
+#include <filesystem>
 
 namespace fw
 {
@@ -11,7 +12,7 @@ namespace web
   class StaticPages
   {
   public:
-    explicit StaticPages(crow::SimpleApp& app);
+    StaticPages(crow::SimpleApp& app, const std::filesystem::path& pagedir);
   };
 
 }  // namespace web

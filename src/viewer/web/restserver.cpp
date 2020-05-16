@@ -8,12 +8,13 @@
 #include <grpcpp/security/credentials.h>
 #include <spdlog/spdlog.h>
 
-fw::web::RESTServer::RESTServer(uint16_t port) :
+fw::web::RESTServer::RESTServer(uint16_t port,
+                                const std::filesystem::path& pagedir) :
   app(std::make_unique<crow::SimpleApp>()),
   channel(grpc::CreateChannel("localhost:45678",
                               grpc::InsecureChannelCredentials())),
   file_resources(std::make_unique<FileResources>(*app, channel)),
-  static_pages(std::make_unique<StaticPages>(*app))
+  static_pages(std::make_unique<StaticPages>(*app, pagedir))
 {
   app->port(port).multithreaded();
 }

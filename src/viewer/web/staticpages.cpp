@@ -44,9 +44,10 @@ namespace {
 
 }  // anonymous namespace
 
-fw::web::StaticPages::StaticPages(crow::SimpleApp& app)
+fw::web::StaticPages::StaticPages(crow::SimpleApp& app,
+                                  const std::filesystem::path& pagedir)
 {
-  crow::mustache::set_base("./pages");
+  crow::mustache::set_base(pagedir.string());
 
   CROW_ROUTE(app, "/")
     ([]
