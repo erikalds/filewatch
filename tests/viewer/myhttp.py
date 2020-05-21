@@ -1,8 +1,10 @@
+import json
+import unittest
 import urllib.request
 
 class Response:
-    def __init__(self, r=None, code=None, headers=None, body=None):
-        if r is None:
+    def __init__(self, resp=None, code=None, headers=None, body=None):
+        if resp is None:
             assert(code is not None
                    and headers is not None
                    and body is not None)
@@ -10,13 +12,19 @@ class Response:
             self.headers = headers
             self.body = body
         else:
-            self.code = r.code
-            self.headers = { k: v for k, v in r.getheaders() }
-            self.body = r.read()
+            self.code = resp.code
+            self.headers = { k: v for k, v in resp.getheaders() }
+            self.body = resp.read()
+
+    def json(self):
+        assert 'Content-Type' in self.headers
+        msg = 'Content-Type was: {}'.format(self.headers['Content-Type'])
+        assert 'application/json' == self.headers['Content-Type'], msg
+        return json.loads(self.body)
 
 
 def GET(resource):
     try:
-        return Response(urllib.request.urlopen(resource))
+        return Response(resp=urllib.request.urlopen(resource))
     except urllib.error.HTTPError as e:
         return Response(code=e.code, headers=e.hdrs, body=e.msg)
