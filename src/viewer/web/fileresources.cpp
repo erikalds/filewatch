@@ -13,14 +13,21 @@ fw::web::FileResources::FileResources(crow::SimpleApp& app,
   CROW_ROUTE(app, "/v1.0/files")
     ([&]{
        crow::json::wvalue o;
-       o["/"] = build_tree("/");
-       return o;
+       auto tree = build_tree("/");
+       auto rtree = crow::json::load(crow::json::dump(tree));
+       if (rtree.has("error"))
+       {
+         return crow::response{static_cast<int>(rtree["error"]["code"])};
+       }
+       o["/"] = std::move(tree);
+       return crow::response{o};
      });
 }
 
 fw::web::FileResources::~FileResources() = default;
 
 namespace {
+
   std::string create_dir_label(std::string_view dirpath)
   {
     if (dirpath == "/")
@@ -33,6 +40,13 @@ namespace {
     assert(pos != std::string_view::npos);
     return std::string{dirpath.substr(pos + 1)};
   }
+
+  namespace http
+  {
+    static const int not_found{404};
+    static const int internal_server_error{500};
+  }  // namespace http
+
 }  // anonymous namespace
 
 crow::json::wvalue fw::web::FileResources::build_tree(const std::string& path,
@@ -47,8 +61,20 @@ crow::json::wvalue fw::web::FileResources::build_tree(const std::string& path,
   auto status = dirstub->ListDirectories(&ctxt, dirname, &dirlist);
   if (!status.ok())
   {
-    spdlog::warn("status not ok 2");
-    return crow::json::wvalue{};
+    spdlog::warn("Unable to list directory: {}. Msg: {}", path,
+                 status.error_message());
+    crow::json::wvalue error{};
+    error["error"]["message"] = status.error_message();
+    if (status.error_code() == grpc::NOT_FOUND)
+    {
+      error["error"]["code"] = http::not_found;
+    }
+    else
+    {
+      error["error"]["code"] = http::internal_server_error;
+    }
+
+    return error;
   }
 
   crow::json::wvalue o;

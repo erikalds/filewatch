@@ -1,4 +1,5 @@
 import json
+import logging
 import unittest
 import urllib.request
 
@@ -20,7 +21,11 @@ class Response:
         assert 'Content-Type' in self.headers
         msg = 'Content-Type was: {}'.format(self.headers['Content-Type'])
         assert 'application/json' == self.headers['Content-Type'], msg
-        return json.loads(self.body)
+        try:
+            return json.loads(self.body)
+        except:
+            logging.warn("HTTP Response body was: {}".format(self.body))
+            raise
 
 
 def GET(resource):

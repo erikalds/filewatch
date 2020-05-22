@@ -7,6 +7,19 @@ import unittest
 
 temporarydir = None
 
+
+class TemporarilyRemovedDir:
+    def __init__(self, dirname):
+        assert(os.path.isdir(dirname))
+        self.dirname = dirname
+
+    def __enter__(self):
+        os.rmdir(self.dirname)
+
+    def __exit__(self, type_, value, traceback):
+        os.mkdir(self.dirname)
+
+
 class TestCase(unittest.TestCase):
     def test_serves_all_files_in_root_dir(self):
         with FilesystemCleanup(temporarydir) as fs:
@@ -93,7 +106,18 @@ class TestCase(unittest.TestCase):
             self.assertEqual('subdir2/',
                              data['/']['nodes']['subdir1']['nodes']['subdir2']['label'])
 
-    # def test_no_files_found / other errors from ListFiles/ListDirectories
+    def test_no_files(self):
+        response = myhttp.GET("http://127.0.0.1:8086/v1.0/files")
+        self.assertEqual(200, response.code)
+        data = response.json()
+        self.assertIn('/', data)
+        self.assertIsNone(data['/']['nodes'])
+
+    def test_root_directory_does_not_exist(self):
+        global temporarydir
+        with TemporarilyRemovedDir(temporarydir):
+            response = myhttp.GET("http://127.0.0.1:8086/v1.0/files")
+            self.assertEqual(404, response.code)
 
 
 def run_test(tempdir):
