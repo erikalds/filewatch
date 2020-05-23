@@ -70,6 +70,21 @@ class TestCase(unittest.TestCase):
             self.assertIn('mtime', data['/']['nodes']['file1.txt'])
             self.assertEqual(fs.mtime('file1.txt'), data['/']['nodes']['file1.txt']['mtime'])
 
+    def test_serves_size_of_files(self):
+        with FilesystemCleanup(temporarydir) as fs:
+            fs.create_file("file1.txt", "contents")
+            fs.create_file("file2.txt", "more contents")
+            response = myhttp.GET("http://127.0.0.1:8086/v1.0/files")
+            self.assertEqual(200, response.code)
+            data = response.json()
+            self.assertIn('/', data)
+            self.assertIn('file1.txt', data['/']['nodes'])
+            self.assertIn('size', data['/']['nodes']['file1.txt'])
+            self.assertEqual(fs.size('file1.txt'), data['/']['nodes']['file1.txt']['size'])
+            self.assertIn('file2.txt', data['/']['nodes'])
+            self.assertIn('size', data['/']['nodes']['file2.txt'])
+            self.assertEqual(fs.size('file2.txt'), data['/']['nodes']['file2.txt']['size'])
+
     def test_walks_subdirectories_of_root_dir(self):
         with FilesystemCleanup(temporarydir) as fs:
             fs.create_file("file1.txt", "contents")

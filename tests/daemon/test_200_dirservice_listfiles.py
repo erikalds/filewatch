@@ -90,6 +90,15 @@ class TestCase(unittest.TestCase):
             self.assertEquals(expected[os.path.join("dir1", fname.name)],
                              fname.modification_time.epoch)
 
+    def test_lists_files_with_size(self):
+        global fs
+        dirname = filewatch_pb2.Directoryname()
+        dirname.name = "/dir1"
+        filelist = self.stub.ListFiles(dirname)
+        for fname in filelist.filenames:
+            self.assertEquals(fs.size(os.path.join('dir1', fname.name)),
+                              fname.size)
+
     def test_fails_when_directory_does_not_exist(self):
         dirname = filewatch_pb2.Directoryname()
         dirname.name = "/not_existing_dir"
@@ -117,8 +126,10 @@ def run_test(tempdir):
         fs.create_file("file2.txt", "file2")
         fs.create_dir("dir1")
         fs.create_file(os.path.join("dir1", "file3.txt"), "file3")
-        fs.create_file(os.path.join("dir1", "file4.txt"), "file4")
-        fs.create_file(os.path.join("dir1", "file5.txt"), "file5")
+        fs.create_file(os.path.join("dir1", "file4.txt"),
+                       "file4 with more contents")
+        fs.create_file(os.path.join("dir1", "file5.txt"),
+                       "file5 with even more contents")
 
         runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(unittest.makeSuite(TestCase))

@@ -14,6 +14,7 @@ fw::dm::DirectoryWatcher::DirectoryWatcher(std::string_view dirname_,
 
 namespace
 {
+
   template<typename ModificationTimeContainerT>
   void set_mtime_of(ModificationTimeContainerT& mtc,
                     const fw::dm::fs::DirectoryEntry& entry)
@@ -21,12 +22,12 @@ namespace
     mtc.mutable_modification_time()->set_epoch(entry.mtime);
   }
 
-  template<typename NameAndModificationTimeContainerT>
-  void set_name_and_mtime_of(NameAndModificationTimeContainerT& namtc,
-                             const fw::dm::fs::DirectoryEntry& entry)
+  template<typename EntryContainerT>
+  void fill_entry(EntryContainerT& dest,
+                  const fw::dm::fs::DirectoryEntry& entry)
   {
-    namtc.set_name(entry.name);
-    set_mtime_of(namtc, entry);
+    dest.set_name(entry.name);
+    set_mtime_of(dest, entry);
   }
 
 }  // anonymous namespace
@@ -39,7 +40,7 @@ fw::dm::DirectoryWatcher::fill_dir_list(filewatch::DirList& response) const
     [](const fs::DirectoryEntry& direntry) { return !direntry.is_dir; },
     [](filewatch::DirList& resp, const fs::DirectoryEntry& direntry) {
       auto* dn = resp.add_dirnames();
-      set_name_and_mtime_of(*dn, direntry);
+      fill_entry(*dn, direntry);
     });
 }
 
@@ -52,8 +53,10 @@ fw::dm::DirectoryWatcher::fill_file_list(filewatch::FileList& response) const
     [&](filewatch::FileList& resp, const fs::DirectoryEntry& direntry) {
       auto* fn = resp.add_filenames();
       fn->mutable_dirname()->set_name(this->dirname);
-      set_mtime_of(*fn->mutable_dirname(), *fs.get_direntry(this->dirname));
-      set_name_and_mtime_of(*fn, direntry);
+      auto containing_dir_entry = fs.get_direntry(this->dirname);
+      set_mtime_of(*fn->mutable_dirname(), *containing_dir_entry);
+      fill_entry(*fn, direntry);
+      fn->set_size(direntry.size);
     });
 }
 

@@ -104,6 +104,7 @@ crow::json::wvalue fw::web::FileResources::build_tree(const std::string& path,
     nodes[fname]["index"] = dirlist.dirnames_size() + i;
     nodes[fname]["label"] = fname;
     nodes[fname]["mtime"] = filelist.filenames(i).modification_time().epoch();
+    nodes[fname]["size"] = filelist.filenames(i).size();
   }
 
   o["nodes"] = std::move(nodes);

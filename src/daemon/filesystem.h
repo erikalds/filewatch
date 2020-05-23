@@ -19,6 +19,7 @@ namespace fw
         std::string name;  // name of entry in contained directory
         bool is_dir;  // true if this is a directory
         uint64_t mtime;  // milliseconds since epoch
+        uint64_t size;  // size of file/directory in bytes
       };
 
     }  // namespace fs

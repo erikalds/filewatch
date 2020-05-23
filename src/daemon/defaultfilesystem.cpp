@@ -1,6 +1,7 @@
 #include "defaultfilesystem.h"
 
 #include <spdlog/spdlog.h>
+
 #include <fstream>
 
 fw::dm::DefaultFileSystem::DefaultFileSystem(std::string_view rootdir_) :
@@ -51,32 +52,55 @@ std::string fw::dm::DefaultFileSystem::read(std::string_view filepath) const
   return contents;
 }
 
+namespace
+{
+  uint64_t get_mtime_of(const std::filesystem::path& p)
+  {
+    using namespace std::chrono;
+    std::error_code ec;
+    auto tp = std::filesystem::last_write_time(p, ec);
+    auto sctp = time_point_cast<system_clock::duration>(
+      tp - decltype(tp)::clock::now() + system_clock::now());
+    auto t = sctp.time_since_epoch();
+    if (ec)
+    {
+      spdlog::error("path {} gave error: {}\n", p.string(), ec.message());
+    }
+    // NOLINTNEXTLINE
+    using ms64_t = duration<uint64_t, std::ratio<1, 1000>>;
+    auto msecs = duration_cast<ms64_t>(t).count();
+
+    auto tp_t_c = decltype(sctp)::clock::to_time_t(sctp);
+    auto* tp_c = std::localtime(&tp_t_c);
+    std::ostringstream ost;
+    ost << std::put_time(tp_c, "%F %T");
+    spdlog::debug("path {} last write time: {} ms since epoch (at {}).\n",
+                  p.string(), msecs, ost.str());
+
+    return static_cast<uint64_t>(msecs);
+  }
+
+  std::uint64_t get_size_of(const std::filesystem::path& p)
+  {
+    std::error_code ec;
+    auto fsize = std::filesystem::file_size(p, ec);
+    if (ec)
+    {
+      spdlog::warn("Unable to get file size of {}: {}", p.string(),
+                   ec.message());
+      return 0;
+    }
+    return fsize;
+  }
+}  // anonymous namespace
+
 fw::dm::fs::DirectoryEntry
 fw::dm::DefaultFileSystem::create_direntry(const std::filesystem::path& p)
 {
   fw::dm::fs::DirectoryEntry dirent;
   dirent.name = p.filename().string();
   dirent.is_dir = std::filesystem::is_directory(p);
-  std::error_code ec;
-  auto tp = std::filesystem::last_write_time(p, ec);
-  auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-    tp - decltype(tp)::clock::now() + std::chrono::system_clock::now());
-  auto t = sctp.time_since_epoch();
-  if (ec)
-  {
-    spdlog::error("path {} gave error: {}\n", p.string(), ec.message());
-  }
-  // NOLINTNEXTLINE
-  using ms64_t = std::chrono::duration<uint64_t, std::ratio<1, 1000>>;
-  auto msecs = std::chrono::duration_cast<ms64_t>(t).count();
-
-  auto tp_t_c = decltype(sctp)::clock::to_time_t(sctp);
-  auto* tp_c = std::localtime(&tp_t_c);
-  std::ostringstream ost;
-  ost << std::put_time(tp_c, "%F %T");
-  spdlog::debug("path {} last write time: {} ms since epoch (at {}).\n",
-                p.string(), msecs, ost.str());
-
-  dirent.mtime = static_cast<uint64_t>(msecs);
+  dirent.mtime = get_mtime_of(p);
+  dirent.size = dirent.is_dir ? 0 : get_size_of(p);
   return dirent;
 }

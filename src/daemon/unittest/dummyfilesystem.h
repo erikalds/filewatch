@@ -15,6 +15,7 @@ struct FileNode
     entry.name = name;
     entry.is_dir = is_dir;
     entry.mtime = mtime;
+    entry.size = 0;
   }
 
   fw::dm::fs::DirectoryEntry entry;
@@ -217,6 +218,14 @@ public:
     auto node = find_node(entryname);
     REQUIRE(node != nullptr);
     node->contents = contents;
+    node->entry.size = contents.size();
+  }
+
+  std::size_t size(std::string_view entryname)
+  {
+    auto node = find_node(entryname);
+    REQUIRE(node != nullptr);
+    return node->entry.size;
   }
 
   std::deque<fw::dm::fs::DirectoryEntry>

@@ -82,3 +82,11 @@ class FilesystemCleanup:
     def mtime(self, subpath):
         stat = os.stat(os.path.join(self.rootdir, subpath))
         return math.floor(stat.st_mtime * 1000)
+
+    def size(self, subpath):
+        p = os.path.join(self.rootdir, subpath)
+        if os.path.isdir(p):
+            return 0  # per def.: dirs does not have a size
+
+        stat = os.stat(p)
+        return stat.st_size

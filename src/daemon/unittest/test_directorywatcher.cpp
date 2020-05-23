@@ -119,6 +119,7 @@ TEST_CASE("fill directory list sets dirname", "[DirectoryWatcher]")
 }
 
 
+
 TEST_CASE("fill root dir file list", "[DirectoryWatcher]")
 {
   DummyFileSystem fs("rootdir", 564321);
@@ -238,6 +239,39 @@ TEST_CASE("fill file list sets dirname", "[DirectoryWatcher]")
     CHECK("'/subdir/not_existing' does not exist" == status.error_message());
     CHECK("/subdir/not_existing" == response.name().name());
     // CHECK(response.name().modification_time().epoch() == UNDEFINED);
+  }
+}
+
+TEST_CASE("fill file list sets size", "[DirectoryWatcher]")
+{
+  DummyFileSystem fs("rootdir", 382932123);
+  fs.add_dir("/", "subdir", 27389272);
+  fs.add_file("/subdir", "filename", 17283);
+
+  filewatch::FileList response;
+  fw::dm::DirectoryWatcher dw("/subdir", fs);
+
+  SECTION("empty file")
+  {
+    CHECK(dw.fill_file_list(response).ok());
+    REQUIRE(response.filenames_size() == 1);
+    CHECK(response.filenames(0).size() == 0);
+  }
+
+  SECTION("file with content")
+  {
+    fs.write_file("/subdir/filename", "content");
+    CHECK(dw.fill_file_list(response).ok());
+    REQUIRE(response.filenames_size() == 1);
+    CHECK(response.filenames(0).size() == fs.size("/subdir/filename"));
+  }
+
+  SECTION("file with more content")
+  {
+    fs.write_file("/subdir/filename", "more content");
+    CHECK(dw.fill_file_list(response).ok());
+    REQUIRE(response.filenames_size() == 1);
+    CHECK(response.filenames(0).size() == fs.size("/subdir/filename"));
   }
 }
 

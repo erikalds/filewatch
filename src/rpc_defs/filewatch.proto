@@ -78,6 +78,7 @@ message Filename {
   Directoryname dirname = 1;  // Path of containing directory
   string name = 2;  // Name of file
   Timestamp modification_time = 3;  // Modification timestamp of file
+  uint64 size = 4;  // File size in bytes
 }
 
 // A list of files.
