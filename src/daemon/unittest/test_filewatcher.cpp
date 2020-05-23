@@ -1,8 +1,8 @@
-#include <catch2/catch.hpp>
-
-#include "dummyfilesystem.h"
 #include "daemon/filewatcher.h"
+#include "dummyfilesystem.h"
 #include "filewatch.pb.h"
+
+#include <catch2/catch.hpp>
 #include <grpcpp/impl/codegen/status.h>
 
 TEST_CASE("file contents", "[FileWatcher]")

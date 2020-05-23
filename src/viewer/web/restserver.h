@@ -2,10 +2,14 @@
 #define RESTSERVER_H
 
 #include "crow_fwd.h"
+
 #include <filesystem>
 #include <memory>
 
-namespace grpc { class Channel; }
+namespace grpc
+{
+  class Channel;
+}
 
 namespace fw
 {
@@ -27,8 +31,8 @@ namespace fw
       int run();
 
     private:
-      std::unique_ptr<crow::SimpleApp> app; // must be created first
-      std::shared_ptr<grpc::Channel> channel; // must be created second;
+      std::unique_ptr<crow::SimpleApp> app;  // must be created first
+      std::shared_ptr<grpc::Channel> channel;  // must be created second;
       std::unique_ptr<FileResources> file_resources;
       std::unique_ptr<StaticPages> static_pages;
     };

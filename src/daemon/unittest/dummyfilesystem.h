@@ -200,8 +200,8 @@ public:
     auto node = find_node(containing_dirname);
     REQUIRE(node != nullptr);
     insert_child(*node, std::make_unique<FileNode>(filename, false, mtime));
-    spdlog::debug("add_file({}, {}, {}) -> {} - {}", containing_dirname, filename,
-                  mtime, node->entry.name, filename);
+    spdlog::debug("add_file({}, {}, {}) -> {} - {}", containing_dirname,
+                  filename, mtime, node->entry.name, filename);
   }
 
   void rm_file(std::string_view containing_dirname, std::string_view filename)

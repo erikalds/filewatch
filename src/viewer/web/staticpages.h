@@ -2,20 +2,20 @@
 #define STATICPAGES_H
 
 #include "crow_fwd.h"
+
 #include <filesystem>
 
 namespace fw
 {
-namespace web
-{
-
-  class StaticPages
+  namespace web
   {
-  public:
-    StaticPages(crow::SimpleApp& app, const std::filesystem::path& pagedir);
-  };
+    class StaticPages
+    {
+    public:
+      StaticPages(crow::SimpleApp& app, const std::filesystem::path& pagedir);
+    };
 
-}  // namespace web
+  }  // namespace web
 }  // namespace fw
 
 

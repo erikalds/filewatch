@@ -3,7 +3,6 @@
 
 namespace crow
 {
-
   template<typename...>
   class Crow;
 

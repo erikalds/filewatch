@@ -9,7 +9,7 @@ namespace filewatch
 namespace grpc
 {
   class Status;
-} // namespace grpc
+}  // namespace grpc
 
 namespace fw
 {

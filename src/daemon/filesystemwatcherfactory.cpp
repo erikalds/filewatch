@@ -1,11 +1,12 @@
 #include "daemon/filesystemwatcherfactory.h"
 
 #include "daemon/directorywatcher.h"
-#include "daemon/filewatcher.h"
 #include "daemon/filesystem.h"
+#include "daemon/filewatcher.h"
 
 fw::dm::FileSystemWatcherFactory::FileSystemWatcherFactory(
-  std::unique_ptr<FileSystem> fs_) :
+  std::unique_ptr<FileSystem>
+    fs_) :
   fs(std::move(fs_))
 {
 }

@@ -140,17 +140,14 @@ namespace fw::dm
     class FileService : public filewatch::File::Service
     {
     public:
-      explicit FileService(FileSystemFactory& factory_) :
-        factory(factory_)
-      {}
+      explicit FileService(FileSystemFactory& factory_) : factory(factory_) {}
 
-      ::grpc::Status
-      GetContents(::grpc::ServerContext* /*context*/,
-                  const ::filewatch::Filename* request,
-                  ::filewatch::FileContent* response) override
+      ::grpc::Status GetContents(::grpc::ServerContext* /*context*/,
+                                 const ::filewatch::Filename* request,
+                                 ::filewatch::FileContent* response) override
       {
-        auto fileview = factory.create_file(request->dirname().name(),
-                                            request->name());
+        auto fileview =
+          factory.create_file(request->dirname().name(), request->name());
         return fileview->fill_contents(*response);
       }
 

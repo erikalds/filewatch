@@ -1,10 +1,11 @@
 #include "staticpages.h"
 
 #include <crow.h>
+
 #include <spdlog/spdlog.h>
 
-namespace {
-
+namespace
+{
   std::string load_binary(const std::string& path)
   {
     auto basedir = crow::mustache::detail::get_template_base_directory_ref();
@@ -25,7 +26,8 @@ namespace {
   crow::response static_respond(std::string_view path,
                                 std::string_view page,
                                 const std::string& content_type,
-                                const std::function<std::string(std::string)>& loader=crow::mustache::load_text)
+                                const std::function<std::string(std::string)>&
+                                  loader = crow::mustache::load_text)
   {
     auto webpath = fmt::format("{}{}", path, page);
     spdlog::debug("loading page: {}{}",
@@ -35,8 +37,8 @@ namespace {
     if (res.body.empty())
     {
       spdlog::warn("Page not found: {}", webpath);
-      return crow::response{404, // NOLINT - 404 is a magic number
-          fmt::format("Page not found: {}", webpath)};
+      return crow::response{404,  // NOLINT - 404 is a magic number
+                            fmt::format("Page not found: {}", webpath)};
     }
     res.set_header("Content-Type", content_type);
     return res;
@@ -50,32 +52,23 @@ fw::web::StaticPages::StaticPages(crow::SimpleApp& app,
   crow::mustache::set_base(pagedir.string());
 
   CROW_ROUTE(app, "/")
-    ([]
-     {
-       return static_respond("", "index.html", "text/html");
-     });
+  ([] { return static_respond("", "index.html", "text/html"); });
 
   CROW_ROUTE(app, "/logo192.png")
-    ([]
-     {
-       return static_respond("", "logo192.png", "image/png", load_binary);
-     });
+  ([] { return static_respond("", "logo192.png", "image/png", load_binary); });
 
   CROW_ROUTE(app, "/favicon.ico")
-    ([]
-     {
-       return static_respond("", "favicon.ico", "image/x-icon", load_binary);
-     });
+  ([] {
+    return static_respond("", "favicon.ico", "image/x-icon", load_binary);
+  });
 
   CROW_ROUTE(app, "/static/css/<string>")
-    ([](const std::string& page)
-     {
-       return static_respond("static/css/", page, "text/css");
-     });
+  ([](const std::string& page) {
+    return static_respond("static/css/", page, "text/css");
+  });
 
   CROW_ROUTE(app, "/static/js/<string>")
-    ([](const std::string& page)
-     {
-       return static_respond("static/js/", page, "text/javascript");
-     });
+  ([](const std::string& page) {
+    return static_respond("static/js/", page, "text/javascript");
+  });
 }

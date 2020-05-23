@@ -18,8 +18,8 @@ namespace fw
 
       std::unique_ptr<DirectoryView>
       create_directory(std::string_view dirname) override;
-      std::unique_ptr<FileView>
-      create_file(std::string_view dirname, std::string_view filename) override;
+      std::unique_ptr<FileView> create_file(std::string_view dirname,
+                                            std::string_view filename) override;
 
     private:
       std::unique_ptr<FileSystem> fs;

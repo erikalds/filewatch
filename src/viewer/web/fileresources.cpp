@@ -2,32 +2,35 @@
 
 #include "filewatch.grpc.pb.h"
 #include <crow.h>
+
 #include <grpcpp/channel.h>
 #include <spdlog/spdlog.h>
+
 #include <filesystem>
 
 fw::web::FileResources::FileResources(crow::SimpleApp& app,
-                                      std::shared_ptr<grpc::Channel> channel_) :
+                                      std::shared_ptr<grpc::Channel>
+                                        channel_) :
   channel(std::move(channel_))
 {
   CROW_ROUTE(app, "/v1.0/files")
-    ([&]{
-       crow::json::wvalue o;
-       auto tree = build_tree("/");
-       auto rtree = crow::json::load(crow::json::dump(tree));
-       if (rtree.has("error"))
-       {
-         return crow::response{static_cast<int>(rtree["error"]["code"])};
-       }
-       o["/"] = std::move(tree);
-       return crow::response{o};
-     });
+  ([&] {
+    crow::json::wvalue o;
+    auto tree = build_tree("/");
+    auto rtree = crow::json::load(crow::json::dump(tree));
+    if (rtree.has("error"))
+    {
+      return crow::response{static_cast<int>(rtree["error"]["code"])};
+    }
+    o["/"] = std::move(tree);
+    return crow::response{o};
+  });
 }
 
 fw::web::FileResources::~FileResources() = default;
 
-namespace {
-
+namespace
+{
   std::string create_dir_label(std::string_view dirpath)
   {
     if (dirpath == "/")

@@ -2,11 +2,13 @@
 #define FILEWATCHER_H
 
 #include "fileview.h"
+
 #include <string>
 
-namespace fw {
-  namespace dm {
-
+namespace fw
+{
+  namespace dm
+  {
     class FileSystem;
 
     class FileWatcher : public FileView
