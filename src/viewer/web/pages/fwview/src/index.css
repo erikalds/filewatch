@@ -42,3 +42,7 @@ ul {
 
 .FilewatcherView {
 }
+
+.FileContainerView {
+    display: inline-block
+}
